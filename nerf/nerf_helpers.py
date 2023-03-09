@@ -25,21 +25,6 @@ def get_minibatches(inputs: torch.Tensor, chunksize: Optional[int] = 1024 * 8):
     return [inputs[i : i + chunksize] for i in range(0, inputs.shape[0], chunksize)]
 
 
-def meshgrid_xy(
-    tensor1: torch.Tensor, tensor2: torch.Tensor
-) -> (torch.Tensor, torch.Tensor):
-    """Mimick np.meshgrid(..., indexing="xy") in pytorch. torch.meshgrid only allows "ij" indexing.
-    (If you're unsure what this means, safely skip trying to understand this, and run a tiny example!)
-
-    Args:
-      tensor1 (torch.Tensor): Tensor whose elements define the first dimension of the returned meshgrid.
-      tensor2 (torch.Tensor): Tensor whose elements define the second dimension of the returned meshgrid.
-    """
-    # TESTED
-    ii, jj = torch.meshgrid(tensor1, tensor2)
-    return ii.transpose(-1, -2), jj.transpose(-1, -2)
-
-
 def cumprod_exclusive(tensor: torch.Tensor) -> torch.Tensor:
     r"""Mimick functionality of tf.math.cumprod(..., exclusive=True), as it isn't available in PyTorch.
 
@@ -64,15 +49,14 @@ def cumprod_exclusive(tensor: torch.Tensor) -> torch.Tensor:
     return cumprod
 
 
-def get_ray_bundle(
-    height: int, width: int, focal_length: float, tform_cam2world: torch.Tensor
-):
+def get_ray_bundle(height: int, width: int, focal_length: float, tform_cam2world: torch.Tensor):
     r"""Compute the bundle of rays passing through all pixels of an image (one ray per pixel).
 
     Args:
     height (int): Height of an image (number of pixels).
     width (int): Width of an image (number of pixels).
     focal_length (float or torch.Tensor): Focal length (number of pixels, i.e., calibrated intrinsics).
+      (denotes the scaling due to lens by factor f)
     tform_cam2world (torch.Tensor): A 6-DoF rigid-body transform (shape: :math:`(4, 4)`) that
       transforms a 3D point from the camera frame to the "world" frame for the current example.
 
@@ -87,25 +71,21 @@ def get_ray_bundle(
       (TODO: double check if explanation of row and col indices convention is right).
     """
     # TESTED
-    ii, jj = meshgrid_xy(
-        torch.arange(
-            width, dtype=tform_cam2world.dtype, device=tform_cam2world.device
-        ).to(tform_cam2world),
-        torch.arange(
-            height, dtype=tform_cam2world.dtype, device=tform_cam2world.device
-        ),
+    ii, jj = torch.meshgrid(
+      torch.arange(width).to(tform_cam2world),
+      torch.arange(height).to(tform_cam2world),
+      indexing = 'xy'
     )
-    directions = torch.stack(
-        [
-            (ii - width * 0.5) / focal_length,
-            -(jj - height * 0.5) / focal_length,
-            -torch.ones_like(ii),
-        ],
-        dim=-1,
-    )
-    ray_directions = torch.sum(
-        directions[..., None, :] * tform_cam2world[:3, :3], dim=-1
-    )
+    #denotes the vector in terms of camera position
+    directions = torch.stack([(ii - width * .5) / focal_length,
+                            -(jj - height * .5) / focal_length,
+                            -torch.ones_like(ii)
+                           ], dim=-1)
+    # using cam2world, transforming the coordinate system from camera of world origin
+    # each point(1,1,3) should multipled by tf, hence broadcasting (H,W,1,3) 
+    # dividing by focal length to bring it from camera's projection prespective to world perspective
+    ray_directions = torch.sum(directions[..., None, :] * tform_cam2world[:3, :3], dim=-1)
+    # camera origin is translation component in the cam2world 
     ray_origins = tform_cam2world[:3, -1].expand(ray_directions.shape)
     return ray_origins, ray_directions
 
