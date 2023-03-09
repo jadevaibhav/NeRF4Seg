@@ -3,7 +3,7 @@ from typing import Optional
 
 import torch
 
-import torchsearchsorted
+#import torchsearchsorted
 
 
 def img2mse(img_src, img_tgt):
@@ -218,8 +218,8 @@ def sample_pdf(bins, weights, num_samples, det=False):
         u = torch.rand(list(cdf.shape[:-1]) + [num_samples]).to(weights)
 
     # Invert CDF
-    inds = torchsearchsorted.searchsorted(
-        cdf.contiguous(), u.contiguous(), side="right"
+    inds = torch.searchsorted(
+        cdf.contiguous(), u.contiguous(), right=True#
     )
     below = torch.max(torch.zeros_like(inds), inds - 1)
     above = torch.min((cdf.shape[-1] - 1) * torch.ones_like(inds), inds)
