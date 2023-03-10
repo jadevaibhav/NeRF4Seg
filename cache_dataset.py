@@ -10,7 +10,7 @@ import numpy as np
 import torch
 from tqdm import tqdm
 
-from nerf import get_ray_bundle, load_blender_data, load_llff_data, meshgrid_xy
+from nerf import get_ray_bundle, load_blender_data, load_llff_data
 
 
 def cache_nerf_dataset(args):
@@ -72,7 +72,7 @@ def cache_nerf_dataset(args):
             pose_target = poses[img_idx, :3, :4].to(device)
             ray_origins, ray_directions = get_ray_bundle(H, W, focal, pose_target)
             coords = torch.stack(
-                meshgrid_xy(torch.arange(H).to(device), torch.arange(W).to(device)),
+                torch.meshgrid(torch.arange(H).to(device), torch.arange(W).to(device),indexing='xy'),
                 dim=-1,
             )
             coords = coords.reshape((-1, 2))

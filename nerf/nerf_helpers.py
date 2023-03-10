@@ -265,7 +265,9 @@ def sample_pdf_2(bins, weights, num_samples, det=False):
     # Invert CDF
     u = u.contiguous()
     cdf = cdf.contiguous()
-    inds = torchsearchsorted.searchsorted(cdf, u, side="right")
+    inds = torch.searchsorted(
+        cdf, u, right=True
+    )
     below = torch.max(torch.zeros_like(inds - 1), inds - 1)
     above = torch.min((cdf.shape[-1] - 1) * torch.ones_like(inds), inds)
     inds_g = torch.stack((below, above), dim=-1)  # (batchsize, num_samples, 2)
