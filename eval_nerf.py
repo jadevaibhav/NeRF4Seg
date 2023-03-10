@@ -8,6 +8,7 @@ import torch
 import torchvision
 import yaml
 from tqdm import tqdm
+import glob
 
 from nerf import (
     CfgNode,
@@ -64,25 +65,34 @@ def main():
 
     images, poses, render_poses, hwf = None, None, None, None
     i_train, i_val, i_test = None, None, None
-    if cfg.dataset.type.lower() == "blender":
-        # Load blender dataset
-        images, poses, render_poses, hwf, i_split = load_blender_data(
-            cfg.dataset.basedir,
-            half_res=cfg.dataset.half_res,
-            testskip=cfg.dataset.testskip,
+    train_paths, validation_paths = None, None
+    USE_CACHED_DATASET = False
+    if hasattr(cfg.dataset, "cachedir") and os.path.exists(cfg.dataset.cachedir):
+        train_paths = glob.glob(os.path.join(cfg.dataset.cachedir, "train", "*.data"))
+        validation_paths = glob.glob(
+            os.path.join(cfg.dataset.cachedir, "val", "*.data")
         )
-        i_train, i_val, i_test = i_split
-        H, W, focal = hwf
-        H, W = int(H), int(W)
-    elif cfg.dataset.type.lower() == "llff":
-        # Load LLFF dataset
-        images, poses, bds, render_poses, i_test = load_llff_data(
-            cfg.dataset.basedir, factor=cfg.dataset.downsample_factor,
-        )
-        hwf = poses[0, :3, -1]
-        H, W, focal = hwf
-        hwf = [int(H), int(W), focal]
-        render_poses = torch.from_numpy(render_poses)
+        USE_CACHED_DATASET = True
+    else:
+        if cfg.dataset.type.lower() == "blender":
+            # Load blender dataset
+            images, poses, render_poses, hwf, i_split = load_blender_data(
+                cfg.dataset.basedir,
+                half_res=cfg.dataset.half_res,
+                testskip=cfg.dataset.testskip,
+            )
+            i_train, i_val, i_test = i_split
+            H, W, focal = hwf
+            H, W = int(H), int(W)
+        elif cfg.dataset.type.lower() == "llff":
+            # Load LLFF dataset
+            images, poses, bds, render_poses, i_test = load_llff_data(
+                cfg.dataset.basedir, factor=cfg.dataset.downsample_factor,
+            )
+            hwf = poses[0, :3, -1]
+            H, W, focal = hwf
+            hwf = [int(H), int(W), focal]
+            render_poses = torch.from_numpy(render_poses)
 
     # Device on which to run.
     device = "cpu"
@@ -146,12 +156,48 @@ def main():
     if model_fine:
         model_fine.eval()
 
-    render_poses = render_poses.float().to(device)
-
-    # Create directory to save images to.
+    rgb_coarse, rgb_fine = None, None
     os.makedirs(configargs.savedir, exist_ok=True)
     if configargs.save_disparity_image:
-        os.makedirs(os.path.join(configargs.savedir, "disparity"), exist_ok=True)
+        os.makedirs(os.path.join(configargs.savedir, "disparity"), exist_ok=True) 
+
+    # Create directory to save images to.
+    if USE_CACHED_DATASET:
+        datafile = np.random.choice(train_paths)
+        cache_dict = torch.load(datafile)
+        ray_bundle = cache_dict["ray_bundle"].to(device)
+        ray_origins, ray_directions = (
+            ray_bundle[0].reshape((-1, 3)),
+            ray_bundle[1].reshape((-1, 3)),
+        )
+        #target_ray_values = cache_dict["target"][..., :3].reshape((-1, 3))
+        select_inds = np.random.choice(
+            ray_origins.shape[0],
+            size=(cfg.nerf.train.num_random_rays),
+            replace=False,
+        )
+        ray_origins, ray_directions = (
+            ray_origins[select_inds],
+            ray_directions[select_inds],
+        )
+        target_ray_values = target_ray_values[select_inds].to(device)
+        # ray_bundle = torch.stack([ray_origins, ray_directions], dim=0).to(device)
+
+        rgb_coarse, _, _, rgb_fine, _, _ = run_one_iter_of_nerf(
+            cache_dict["height"],
+            cache_dict["width"],
+            cache_dict["focal_length"],
+            model_coarse,
+            model_fine,
+            ray_origins,
+            ray_directions,
+            cfg,
+            mode="validation",
+            encode_position_fn=encode_position_fn,
+            encode_direction_fn=encode_direction_fn,
+        )
+    else:
+        render_poses = render_poses.float().to(device)
 
     # Evaluation loop
     times_per_image = []
