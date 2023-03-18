@@ -79,6 +79,8 @@ def main():
         images, poses, bds, render_poses, i_test = load_llff_data(
             cfg.dataset.basedir, factor=cfg.dataset.downsample_factor,
         )
+        print("render_poses:",render_poses.shape)
+
         hwf = poses[0, :3, -1]
         H, W, focal = hwf
         hwf = [int(H), int(W), focal]
@@ -125,7 +127,7 @@ def main():
         )
         model_fine.to(device)
 
-    checkpoint = torch.load(configargs.checkpoint)
+    checkpoint = torch.load(configargs.checkpoint,map_location=device)
     model_coarse.load_state_dict(checkpoint["model_coarse_state_dict"])
     if checkpoint["model_fine_state_dict"]:
         try:

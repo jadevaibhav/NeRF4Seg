@@ -72,6 +72,9 @@ def _load_data(basedir, factor=None, width=None, height=None, load_imgs=True):
     poses = poses_arr[:, :-2].reshape([-1, 3, 5]).transpose([1, 2, 0])
     bds = poses_arr[:, -2:].transpose([1, 0])
 
+    print("poses_bounds.npy poses here:",poses_arr.shape)
+    print("poses share here:",poses.shape)
+
     img0 = [
         os.path.join(basedir, "images", f)
         for f in sorted(os.listdir(os.path.join(basedir, "images")))
@@ -117,8 +120,11 @@ def _load_data(basedir, factor=None, width=None, height=None, load_imgs=True):
         return
 
     sh = imageio.imread(imgfiles[0]).shape
+    print("poses[:2, 4, :]",poses[:2, 4, :].shape)
     poses[:2, 4, :] = np.array(sh[:2]).reshape([2, 1])
     poses[2, 4, :] = poses[2, 4, :] * 1.0 / factor
+
+    print("poses here some processing:",poses.shape)
 
     if not load_imgs:
         return poses, bds
@@ -150,6 +156,7 @@ def viewmatrix(z, up, pos):
 
 
 def ptstocam(pts, c2w):
+    #transforming pts from world to camera coordinates
     tt = np.matmul(c2w[:3, :3].T, (pts - c2w[:3, 3])[..., np.newaxis])[..., 0]
     return tt
 
@@ -301,6 +308,7 @@ def load_llff_data(
 
     if spherify:
         poses, render_poses, bds = spherify_poses(poses, bds)
+        print("spherify here:")
 
     else:
         c2w = poses_avg(poses)
@@ -337,9 +345,10 @@ def load_llff_data(
         render_poses = render_path_spiral(
             c2w_path, up, rads, focal, zdelta, zrate=0.5, rots=N_rots, N=N_views
         )
+        
 
     render_poses = np.array(render_poses).astype(np.float32)
-
+    print("render_poses_spiral here:",render_poses.shape)
     c2w = poses_avg(poses)
     print("Data:")
     print(poses.shape, images.shape, bds.shape)

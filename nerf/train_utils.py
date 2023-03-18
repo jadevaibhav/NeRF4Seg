@@ -140,6 +140,7 @@ def run_one_iter_of_nerf(
     encode_position_fn=None,
     encode_direction_fn=None,
 ):
+    print(options)
     viewdirs = None
     if options.nerf.use_viewdirs:
         # Provide ray directions as input
