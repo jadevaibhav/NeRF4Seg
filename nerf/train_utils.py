@@ -2,7 +2,7 @@ import torch
 
 from .nerf_helpers import get_minibatches, ndc_rays
 from .nerf_helpers import sample_pdf_2 as sample_pdf
-from .volume_rendering_utils import volume_render_radiance_field
+from .volume_rendering_utils import volume_render_radiance_field,volume_render_radiance_field_with_seg
 
 
 def run_network(network_fn, pts, ray_batch, chunksize, embed_fn, embeddirs_fn):
@@ -42,6 +42,8 @@ def predict_and_render_radiance(
 
     # TODO: Use actual values for "near" and "far" (instead of 0. and 1.)
     # when not enabling "ndc".
+
+    # taking num_samples along the ray directions
     t_vals = torch.linspace(
         0.0,
         1.0,
@@ -55,6 +57,7 @@ def predict_and_render_radiance(
         z_vals = 1.0 / (1.0 / near * (1.0 - t_vals) + 1.0 / far * t_vals)
     z_vals = z_vals.expand([num_rays, getattr(options.nerf, mode).num_coarse])
 
+    # Taking random samples in intervals defined by the num_samples
     if getattr(options.nerf, mode).perturb:
         # Get intervals between samples.
         mids = 0.5 * (z_vals[..., 1:] + z_vals[..., :-1])
@@ -66,28 +69,53 @@ def predict_and_render_radiance(
     # pts -> (num_rays, N_samples, 3)
     pts = ro[..., None, :] + rd[..., None, :] * z_vals[..., :, None]
 
-    radiance_field = run_network(
+    if getattr(options.nerf, mode).is_seg:
+        radiance_field = run_network(
         model_coarse,
         pts,
         ray_batch,
         getattr(options.nerf, mode).chunksize,
         encode_position_fn,
         encode_direction_fn,
-    )
+        )
 
-    (
+        (
         rgb_coarse,
         disp_coarse,
         acc_coarse,
         weights,
         depth_coarse,
-    ) = volume_render_radiance_field(
+        seg_course
+        ) = volume_render_radiance_field_with_seg(
         radiance_field,
         z_vals,
         rd,
         radiance_field_noise_std=getattr(options.nerf, mode).radiance_field_noise_std,
         white_background=getattr(options.nerf, mode).white_background,
-    )
+        )
+    else:
+        radiance_field = run_network(
+            model_coarse,
+            pts,
+            ray_batch,
+            getattr(options.nerf, mode).chunksize,
+            encode_position_fn,
+            encode_direction_fn,
+        )
+
+        (
+            rgb_coarse,
+            disp_coarse,
+            acc_coarse,
+            weights,
+            depth_coarse,
+        ) = volume_render_radiance_field(
+            radiance_field,
+            z_vals,
+            rd,
+            radiance_field_noise_std=getattr(options.nerf, mode).radiance_field_noise_std,
+            white_background=getattr(options.nerf, mode).white_background,
+        )
 
     rgb_fine, disp_fine, acc_fine = None, None, None
     if getattr(options.nerf, mode).num_fine > 0:
@@ -105,26 +133,42 @@ def predict_and_render_radiance(
         z_vals, _ = torch.sort(torch.cat((z_vals, z_samples), dim=-1), dim=-1)
         # pts -> (N_rays, N_samples + N_importance, 3)
         pts = ro[..., None, :] + rd[..., None, :] * z_vals[..., :, None]
-
-        radiance_field = run_network(
+        if getattr(options.nerf, mode).is_seg:
+            radiance_field = run_network(
             model_fine,
             pts,
             ray_batch,
             getattr(options.nerf, mode).chunksize,
             encode_position_fn,
             encode_direction_fn,
-        )
-        rgb_fine, disp_fine, acc_fine, _, _ = volume_render_radiance_field(
+            )
+            rgb_fine, disp_fine, acc_fine, _, _,seg_fine = volume_render_radiance_field(
             radiance_field,
             z_vals,
             rd,
-            radiance_field_noise_std=getattr(
-                options.nerf, mode
-            ).radiance_field_noise_std,
+            radiance_field_noise_std=getattr(options.nerf, mode).radiance_field_noise_std,
             white_background=getattr(options.nerf, mode).white_background,
-        )
+            )
+        else:    
+            radiance_field = run_network(
+                model_fine,
+                pts,
+                ray_batch,
+                getattr(options.nerf, mode).chunksize,
+                encode_position_fn,
+                encode_direction_fn,
+            )
+            rgb_fine, disp_fine, acc_fine, _, _ = volume_render_radiance_field(
+                radiance_field,
+                z_vals,
+                rd,
+                radiance_field_noise_std=getattr(
+                    options.nerf, mode
+                ).radiance_field_noise_std,
+                white_background=getattr(options.nerf, mode).white_background,
+            )
 
-    return rgb_coarse, disp_coarse, acc_coarse, rgb_fine, disp_fine, acc_fine
+    return rgb_coarse, disp_coarse, acc_coarse, rgb_fine, disp_fine, acc_fine,seg_course,seg_fine
 
 
 def run_one_iter_of_nerf(
