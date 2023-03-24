@@ -9,32 +9,60 @@ import numpy as np
 #  see https://github.com/Fyusion/LLFF for original
 
 
-def _minify(basedir, factors=[], resolutions=[]):
+
+def _minify(basedir, factors=[], resolutions=[], is_seg=False):
+    # downsamples images based on a user provided factor in config.yml file for object
     needtoload = False
     for r in factors:
+        # r = 8
+        print('VALUE of factors: \n', r)
         imgdir = os.path.join(basedir, "images_{}".format(r))
         if not os.path.exists(imgdir):
             needtoload = True
+        if is_seg:
+            segdir = os.path.join(basedir, "masks_{}".format(r))
+            if not os.path.exists(segdir):
+                needtoload = True
     for r in resolutions:
+        print('VALUE of resolutions: \n', r)
         imgdir = os.path.join(basedir, "images_{}x{}".format(r[1], r[0]))
         if not os.path.exists(imgdir):
             needtoload = True
+        if is_seg:
+            segdir = os.path.join(basedir, "masks_{}x{}".format(r[1], r[0]))
+            if not os.path.exists(segdir):
+                needtoload = True
     if not needtoload:
         return
 
     from subprocess import check_output
 
     imgdir = os.path.join(basedir, "images")
+    segdir = os.path.join(basedir, "segmentation_masks")
+
     imgs = [os.path.join(imgdir, f) for f in sorted(os.listdir(imgdir))]
+    masks = [os.path.join(segdir, f) for f in sorted(os.listdir(segdir))]
+
     imgs = [
         f
         for f in imgs
         if any([f.endswith(ex) for ex in ["JPG", "jpg", "png", "jpeg", "PNG"]])
     ]
+
+    masks = [
+        f
+        for f in masks
+        if any([f.endswith(ex) for ex in ["JPG", "jpg", "png", "jpeg", "PNG"]])
+    ]
+
+    print('IMAGES LINE 38: \n', np.asarray(imgs))
+
     imgdir_orig = imgdir
+    segdir_orig = segdir
 
     wd = os.getcwd()
-
+    print('CWD LINE 56: \n', wd)
+    
     for r in factors + resolutions:
         if isinstance(r, int):
             name = "images_{}".format(r)
@@ -65,7 +93,7 @@ def _minify(basedir, factors=[], resolutions=[]):
             print("Removed duplicates")
         print("Done")
 
-
+# Original image shape for testing changes: (4032, 3024, 3)
 def _load_data(basedir, factor=None, width=None, height=None, load_imgs=True):
 
     poses_arr = np.load(os.path.join(basedir, "poses_bounds.npy"))
@@ -78,6 +106,9 @@ def _load_data(basedir, factor=None, width=None, height=None, load_imgs=True):
         if f.endswith("JPG") or f.endswith("jpg") or f.endswith("png")
     ][0]
     sh = imageio.imread(img0).shape
+    
+    # (3024, 4032, 3) -> downscaled to (378, 504, 3)
+    print('IMAGE SHAPE LINE 82: \n', sh) 
 
     sfx = ""
 
@@ -98,6 +129,7 @@ def _load_data(basedir, factor=None, width=None, height=None, load_imgs=True):
     else:
         factor = 1
 
+    # create and set folder path according to downscale factor
     imgdir = os.path.join(basedir, "images" + sfx)
     if not os.path.exists(imgdir):
         print(imgdir, "does not exist, returning")
@@ -115,6 +147,9 @@ def _load_data(basedir, factor=None, width=None, height=None, load_imgs=True):
             )
         )
         return
+    
+    # 41
+    print('IMAGE FILES FINAL LEN: \n', np.asarray(imgfiles).shape)
 
     sh = imageio.imread(imgfiles[0]).shape
     poses[:2, 4, :] = np.array(sh[:2]).reshape([2, 1])
@@ -133,6 +168,8 @@ def _load_data(basedir, factor=None, width=None, height=None, load_imgs=True):
     imgs = np.stack(imgs, -1)
 
     print("Loaded image data", imgs.shape, poses[:, -1, 0])
+    print('IMAGE SHAPE: \n', imgs.shape)
+    print('................................................................_LOAD_DATA WORKING....................................................................')
     return poses, bds, imgs
 
 
@@ -350,5 +387,5 @@ def load_llff_data(
 
     images = images.astype(np.float32)
     poses = poses.astype(np.float32)
-
+    print('................................................................LOAD_LLFF_DATA WORKING....................................................................')
     return images, poses, bds, render_poses, i_test
