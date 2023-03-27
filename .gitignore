@@ -134,3 +134,13 @@ dmypy.json
 cache/
 data/
 logs/
+
+
+
+# 2d segmentation
+2d-segmentation/temp.py
+2d-segmentation/input
+2d-segmentation/models
+2d-segmentation/output
+
+
