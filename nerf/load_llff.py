@@ -2,6 +2,7 @@ import os
 
 import imageio
 import numpy as np
+import skimage.transform as skt
 
 # Implementation from:
 # https://github.com/yenchenlin/nerf-pytorch/blob/master/load_llff.py
@@ -15,83 +16,132 @@ def _minify(basedir, factors=[], resolutions=[], is_seg=False):
     needtoload = False
     for r in factors:
         # r = 8
-        print('VALUE of factors: \n', r)
-        imgdir = os.path.join(basedir, "images_{}".format(r))
-        if not os.path.exists(imgdir):
-            needtoload = True
+        
         if is_seg:
             segdir = os.path.join(basedir, "masks_{}".format(r))
             if not os.path.exists(segdir):
                 needtoload = True
+        elif not is_seg:
+            print('VALUE of factors: \n', r)
+            imgdir = os.path.join(basedir, "images_{}".format(r))
+            if not os.path.exists(imgdir):
+                needtoload = True
+
     for r in resolutions:
-        print('VALUE of resolutions: \n', r)
-        imgdir = os.path.join(basedir, "images_{}x{}".format(r[1], r[0]))
-        if not os.path.exists(imgdir):
-            needtoload = True
+        
         if is_seg:
             segdir = os.path.join(basedir, "masks_{}x{}".format(r[1], r[0]))
             if not os.path.exists(segdir):
                 needtoload = True
+
+        elif not is_seg:
+            print('VALUE of resolutions: \n', r)
+            imgdir = os.path.join(basedir, "images_{}x{}".format(r[1], r[0]))
+            if not os.path.exists(imgdir):
+                needtoload = True
+
     if not needtoload:
         return
 
     from subprocess import check_output
 
-    imgdir = os.path.join(basedir, "images")
-    segdir = os.path.join(basedir, "segmentation_masks")
-
-    imgs = [os.path.join(imgdir, f) for f in sorted(os.listdir(imgdir))]
-    masks = [os.path.join(segdir, f) for f in sorted(os.listdir(segdir))]
-
-    imgs = [
-        f
-        for f in imgs
-        if any([f.endswith(ex) for ex in ["JPG", "jpg", "png", "jpeg", "PNG"]])
-    ]
-
-    masks = [
+    
+    if is_seg:
+        segdir = os.path.join(basedir, "segmentation_masks")
+        masks = [os.path.join(segdir, f) for f in sorted(os.listdir(segdir))]
+        masks = [
         f
         for f in masks
         if any([f.endswith(ex) for ex in ["JPG", "jpg", "png", "jpeg", "PNG"]])
     ]
+        segdir_orig = segdir
 
-    print('IMAGES LINE 38: \n', np.asarray(imgs))
+    elif not is_seg: 
+        imgdir = os.path.join(basedir, "images")
+        imgs = [os.path.join(imgdir, f) for f in sorted(os.listdir(imgdir))]
+        imgs = [
+        f
+        for f in imgs
+        if any([f.endswith(ex) for ex in ["JPG", "jpg", "png", "jpeg", "PNG"]])
+    ]
+        imgdir_orig = imgdir
 
-    imgdir_orig = imgdir
-    segdir_orig = segdir
+        print('IMAGES LINE 38: \n', np.asarray(imgs))
 
     wd = os.getcwd()
     print('CWD LINE 56: \n', wd)
     
     for r in factors + resolutions:
-        if isinstance(r, int):
-            name = "images_{}".format(r)
-            resizearg = "{}%".format(100.0 / r)
-        else:
-            name = "images_{}x{}".format(r[1], r[0])
-            resizearg = "{}x{}".format(r[1], r[0])
-        imgdir = os.path.join(basedir, name)
-        if os.path.exists(imgdir):
-            continue
 
-        print("Minifying", r, basedir)
+        if is_seg:
 
-        os.makedirs(imgdir)
-        check_output("cp {}/* {}".format(imgdir_orig, imgdir), shell=True)
+            if isinstance(r, int):
+                name = "masks_{}".format(r)
+                resizearg = "{}%".format(100.0 / r)
+            else:
+                name = "masks_{}x{}".format(r[1], r[0])
+                resizearg = "{}x{}".format(r[1], r[0])
+            segdir = os.path.join(basedir, name)
+            if os.path.exists(segdir):
+                continue
 
-        ext = imgs[0].split(".")[-1]
-        args = " ".join(
-            ["mogrify", "-resize", resizearg, "-format", "png", "*.{}".format(ext)]
-        )
-        print(args)
-        os.chdir(imgdir)
-        check_output(args, shell=True)
-        os.chdir(wd)
+            print("Minifying", r, basedir)
 
-        if ext != "png":
-            check_output("rm {}/*.{}".format(imgdir, ext), shell=True)
-            print("Removed duplicates")
-        print("Done")
+            os.makedirs(segdir)
+
+            #for windows change to 'copy'
+            check_output("copy {}\* {}".format(segdir_orig, segdir), shell=True)
+
+            ext = masks[0].split(".")[-1]
+            args = " ".join(
+                ["mogrify", "-resize", resizearg, "-format", "png", "*.{}".format(ext)]
+            )
+            print(args)
+            os.chdir(segdir)
+            check_output(args, shell=True)
+            os.chdir(wd)
+
+            if ext != "png":
+                check_output("del {}\*.{}".format(segdir, ext), shell=True)
+                print("Removed duplicates")
+            print("Done")
+
+        elif not is_seg:
+
+            if isinstance(r, int):
+                name = "images_{}".format(r)
+                resizearg = "{}%".format(100.0 / r)
+            else:
+                name = "images_{}x{}".format(r[1], r[0])
+                resizearg = "{}x{}".format(r[1], r[0])
+            imgdir = os.path.join(basedir, name)
+            if os.path.exists(imgdir):
+                continue
+
+            print("Minifying", r, basedir)
+
+            os.makedirs(imgdir)
+            check_output("copy {}\* {}".format(imgdir_orig, imgdir), shell=True)
+
+            ext = imgs[0].split(".")[-1]
+            args = " ".join(
+                ["mogrify", "-resize", resizearg, "-format", "png", "*.{}".format(ext)]
+            )
+            print(args)
+            os.chdir(imgdir)
+            check_output(args, shell=True)
+            os.chdir(wd)
+
+            if ext != "png":
+                check_output("del {}\*.{}".format(imgdir, ext), shell=True)
+                print("Removed duplicates")
+            print("Done")
+
+
+
+
+
+
 
 # Original image shape for testing changes: (4032, 3024, 3)
 def _load_data(basedir, factor=None, width=None, height=None, load_imgs=True):
@@ -149,12 +199,15 @@ def _load_data(basedir, factor=None, width=None, height=None, load_imgs=True):
         return
     
     # 41
-    print('IMAGE FILES FINAL LEN: \n', np.asarray(imgfiles).shape)
+    
 
     sh = imageio.imread(imgfiles[0]).shape
+
+    print('IMAGE FILES FINAL SHAPE: \n', sh)
+
     poses[:2, 4, :] = np.array(sh[:2]).reshape([2, 1])
     poses[2, 4, :] = poses[2, 4, :] * 1.0 / factor
-
+    print('POSES SHAPE: \n', poses.shape)
     if not load_imgs:
         return poses, bds
 
@@ -312,14 +365,56 @@ def spherify_poses(poses, bds):
     return poses_reset, new_poses, bds
 
 
+def _load_seg_masks(basedir, factor=None, width=None, height=None):
+    mask_dir = os.path.join(basedir, 'segmentation_masks')
+    mask_names = [m for m in sorted(os.listdir(mask_dir)) if m.endswith("npy")]
+
+    masks = [os.path.join(mask_dir, i) for i in mask_names]
+    mask_values = [np.load(i) for i in masks]
+
+    scaled_masks = []
+
+    if factor!=None:
+        scale_type = factor
+        if not os.path.exists(os.path.join(basedir, f'masks_{scale_type}')):
+            os.mkdir(os.path.join(basedir, f'masks_{scale_type}'))
+            for mask in mask_values:
+                mask_rescaled = skt.resize(mask, (mask.shape[0]/factor, mask.shape[1]/factor, mask.shape[-1]), anti_aliasing=False)
+                scaled_masks.append(mask_rescaled)
+                
+    elif height!=None and width!=None:
+        scale_type = f"{width}_{height}"
+        if not os.path.exists(os.path.join(basedir, f'masks_{scale_type}')):
+            os.mkdir(os.path.join(basedir, f'masks_{scale_type}'))
+            for mask in mask_values:
+                mask_rescaled = skt.resize(mask, (width, height, mask.shape[-1]), anti_aliasing=False)
+                scaled_masks.append(mask_rescaled)
+                
+    else:   
+        scale_type = None    
+        scaled_masks = mask_values
+
+    if scale_type!=None:
+        np.save(os.path.join(os.path.join(basedir, f"masks_{scale_type}"), f"masks_{scale_type}.npy"), scaled_masks)
+        
+
+    return scaled_masks
+
 def load_llff_data(
-    basedir, factor=8, recenter=True, bd_factor=0.75, spherify=False, path_zflat=False
+    basedir, factor=8, recenter=True, bd_factor=0.75, spherify=False, path_zflat=False, is_seg=False
 ):
 
     poses, bds, imgs = _load_data(
         basedir, factor=factor
     )  # factor=8 downsamples original imgs by 8x
     print("Loaded", basedir, bds.min(), bds.max())
+
+    if is_seg:
+    #returns list of mask arrays
+        masks = _load_seg_masks(
+            basedir, factor=factor
+        )
+        print("MASKS LOADED: \n", len(masks))
 
     # Correct rotation matrix ordering and move variable dim to axis 0
     poses = np.concatenate([poses[:, 1:2, :], -poses[:, 0:1, :], poses[:, 2:, :]], 1)
