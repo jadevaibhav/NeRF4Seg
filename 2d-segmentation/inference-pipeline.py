@@ -21,7 +21,6 @@ def main():
     for image in input_image_ls:
         result = inference_segmentor(model, image)
         output_path = os.path.join('output', image.split('/')[-1])
-        print(model.PALETTE[0])
         with open(output_path.split('.')[0]+'.npy', 'wb') as f:
             np.save(f, result[0])
         f.close()
@@ -44,11 +43,13 @@ def main():
                'sign', 'sky', 'snow', 'sofa', 'table', 'track', 'train',
                'tree', 'truck', 'tvmonitor', 'wall', 'water', 'window', 'wood']
         
-        with open(output_path.split('.')[0]+'.txt', 'wb') as t:
+        with open(output_path.split('.')[0]+'.txt', 'w') as t:
             t.write("key, num_pixel, class_name")
+            t.write('\n')
             for key, val in dictionary.items():
-                t.writelines(key, val, mapper[key])
-                
+                t.write(str(key) +','+ str(val) +','+ str(mapper[key]))
+                t.write('\n')
+                                
         print('finished processing ----> ', image)
         
 if __name__ == '__main__':
