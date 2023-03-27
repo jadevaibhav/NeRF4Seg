@@ -72,8 +72,10 @@ def get_ray_bundle(height: int, width: int, focal_length: float, tform_cam2world
     """
     # TESTED
     ii, jj = torch.meshgrid(
-      torch.arange(width).to(tform_cam2world),
-      torch.arange(height).to(tform_cam2world),
+      torch.arange(width,
+                   dtype=tform_cam2world.dtype, device=tform_cam2world.device),
+      torch.arange(height,
+                   dtype=tform_cam2world.dtype, device=tform_cam2world.device),
       indexing = 'xy'
     )
     #denotes the vector in terms of camera position
