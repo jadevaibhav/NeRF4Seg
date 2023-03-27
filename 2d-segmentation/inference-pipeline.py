@@ -1,5 +1,6 @@
 from mmcv.cnn.utils.sync_bn import revert_sync_batchnorm
 from mmseg.apis import inference_segmentor, init_segmentor, show_result_pyplot
+from utils.numpy_helper import segmentation3d
 import mmcv
 import glob2
 import numpy as np
@@ -21,8 +22,9 @@ def main():
     for image in input_image_ls:
         result = inference_segmentor(model, image)
         output_path = os.path.join('output', image.split('/')[-1])
+        seg3d = segmentation3d(result[0])
         with open(output_path.split('.')[0]+'.npy', 'wb') as f:
-            np.save(f, result[0])
+            np.save(f, seg3d)
         f.close()
         visualize_plot(model, image, result, output_path)
 
