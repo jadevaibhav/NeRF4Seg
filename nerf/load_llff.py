@@ -11,131 +11,70 @@ import skimage.transform as skt
 
 
 
-def _minify(basedir, factors=[], resolutions=[], is_seg=False):
+def _minify(basedir, factors=[], resolutions=[]):
     # downsamples images based on a user provided factor in config.yml file for object
     needtoload = False
     for r in factors:
         # r = 8
-        
-        if is_seg:
-            segdir = os.path.join(basedir, "masks_{}".format(r))
-            if not os.path.exists(segdir):
-                needtoload = True
-        elif not is_seg:
-            print('VALUE of factors: \n', r)
-            imgdir = os.path.join(basedir, "images_{}".format(r))
-            if not os.path.exists(imgdir):
-                needtoload = True
+        print('VALUE of factors: \n', r)
+        imgdir = os.path.join(basedir, "images_{}".format(r))
+        if not os.path.exists(imgdir):
+            needtoload = True
 
     for r in resolutions:
-        
-        if is_seg:
-            segdir = os.path.join(basedir, "masks_{}x{}".format(r[1], r[0]))
-            if not os.path.exists(segdir):
-                needtoload = True
-
-        elif not is_seg:
-            print('VALUE of resolutions: \n', r)
-            imgdir = os.path.join(basedir, "images_{}x{}".format(r[1], r[0]))
-            if not os.path.exists(imgdir):
-                needtoload = True
+        print('VALUE of resolutions: \n', r)
+        imgdir = os.path.join(basedir, "images_{}x{}".format(r[1], r[0]))
+        if not os.path.exists(imgdir):
+            needtoload = True
 
     if not needtoload:
         return
 
     from subprocess import check_output
 
-    
-    if is_seg:
-        segdir = os.path.join(basedir, "segmentation_masks")
-        masks = [os.path.join(segdir, f) for f in sorted(os.listdir(segdir))]
-        masks = [
-        f
-        for f in masks
-        if any([f.endswith(ex) for ex in ["JPG", "jpg", "png", "jpeg", "PNG"]])
-    ]
-        segdir_orig = segdir
+    imgdir = os.path.join(basedir, "images")
+    imgs = [os.path.join(imgdir, f) for f in sorted(os.listdir(imgdir))]
+    imgs = [
+    f
+    for f in imgs
+    if any([f.endswith(ex) for ex in ["JPG", "jpg", "png", "jpeg", "PNG"]])
+]
+    imgdir_orig = imgdir
 
-    elif not is_seg: 
-        imgdir = os.path.join(basedir, "images")
-        imgs = [os.path.join(imgdir, f) for f in sorted(os.listdir(imgdir))]
-        imgs = [
-        f
-        for f in imgs
-        if any([f.endswith(ex) for ex in ["JPG", "jpg", "png", "jpeg", "PNG"]])
-    ]
-        imgdir_orig = imgdir
-
-        print('IMAGES LINE 38: \n', np.asarray(imgs))
+    print('IMAGES LINE 38: \n', np.asarray(imgs))
 
     wd = os.getcwd()
     print('CWD LINE 56: \n', wd)
     
     for r in factors + resolutions:
+        if isinstance(r, int):
+            name = "images_{}".format(r)
+            resizearg = "{}%".format(100.0 / r)
+        else:
+            name = "images_{}x{}".format(r[1], r[0])
+            resizearg = "{}x{}".format(r[1], r[0])
+        imgdir = os.path.join(basedir, name)
+        if os.path.exists(imgdir):
+            continue
 
-        if is_seg:
+        print("Minifying", r, basedir)
 
-            if isinstance(r, int):
-                name = "masks_{}".format(r)
-                resizearg = "{}%".format(100.0 / r)
-            else:
-                name = "masks_{}x{}".format(r[1], r[0])
-                resizearg = "{}x{}".format(r[1], r[0])
-            segdir = os.path.join(basedir, name)
-            if os.path.exists(segdir):
-                continue
+        os.makedirs(imgdir)
+        check_output("copy {}\* {}".format(imgdir_orig, imgdir), shell=True)
 
-            print("Minifying", r, basedir)
+        ext = imgs[0].split(".")[-1]
+        args = " ".join(
+            ["mogrify", "-resize", resizearg, "-format", "png", "*.{}".format(ext)]
+        )
+        print(args)
+        os.chdir(imgdir)
+        check_output(args, shell=True)
+        os.chdir(wd)
 
-            os.makedirs(segdir)
-
-            #for windows change to 'copy'
-            check_output("copy {}\* {}".format(segdir_orig, segdir), shell=True)
-
-            ext = masks[0].split(".")[-1]
-            args = " ".join(
-                ["mogrify", "-resize", resizearg, "-format", "png", "*.{}".format(ext)]
-            )
-            print(args)
-            os.chdir(segdir)
-            check_output(args, shell=True)
-            os.chdir(wd)
-
-            if ext != "png":
-                check_output("del {}\*.{}".format(segdir, ext), shell=True)
-                print("Removed duplicates")
-            print("Done")
-
-        elif not is_seg:
-
-            if isinstance(r, int):
-                name = "images_{}".format(r)
-                resizearg = "{}%".format(100.0 / r)
-            else:
-                name = "images_{}x{}".format(r[1], r[0])
-                resizearg = "{}x{}".format(r[1], r[0])
-            imgdir = os.path.join(basedir, name)
-            if os.path.exists(imgdir):
-                continue
-
-            print("Minifying", r, basedir)
-
-            os.makedirs(imgdir)
-            check_output("copy {}\* {}".format(imgdir_orig, imgdir), shell=True)
-
-            ext = imgs[0].split(".")[-1]
-            args = " ".join(
-                ["mogrify", "-resize", resizearg, "-format", "png", "*.{}".format(ext)]
-            )
-            print(args)
-            os.chdir(imgdir)
-            check_output(args, shell=True)
-            os.chdir(wd)
-
-            if ext != "png":
-                check_output("del {}\*.{}".format(imgdir, ext), shell=True)
-                print("Removed duplicates")
-            print("Done")
+        if ext != "png":
+            check_output("del {}\*.{}".format(imgdir, ext), shell=True)
+            print("Removed duplicates")
+        print("Done")
 
 
 
