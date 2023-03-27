@@ -137,6 +137,9 @@ logs/
 
 # 2d segmentation
 2d-segmentation/temp.py
-2d-segmentation/input
-2d-segmentation/models
-2d-segmentation/output
+2d-segmentation/input/*.jpg
+2d-segmentation/models/*.py
+2d-segmentation/models/*.pth
+2d-segmentation/output/*.jpg
+2d-segmentation/output/*.txt
+2d-segmentation/output/*.npy
