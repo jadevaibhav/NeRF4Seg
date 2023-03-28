@@ -58,7 +58,8 @@ def volume_render_radiance_field_with_seg(
     depth_values,
     ray_directions,
     radiance_field_noise_std=0.0,
-    white_background=False):
+    white_background=False,
+    is_color=False):
     """
     v1: without using color rendering for segmentation(baseline)
     v2: with color rendering
@@ -92,8 +93,10 @@ def volume_render_radiance_field_with_seg(
         # noise = noise.to(radiance_field)
         
     # seperate sigma and alpha value for each segmentation class
-    seg_map,weights = seg_3d(radiance_field,dists,noise,is_color=False)
-
+    seg_map,weights = seg_3d(radiance_field,dists,noise,is_color=is_color)
+    if weights is None:
+        return None,None,None,None,None,seg_map
+    
     rgb_map = weights[..., None] * rgb
     rgb_map = rgb_map.sum(dim=-2)
     depth_map = weights * depth_values

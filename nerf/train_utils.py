@@ -69,6 +69,7 @@ def predict_and_render_radiance(
     # pts -> (num_rays, N_samples, 3)
     pts = ro[..., None, :] + rd[..., None, :] * z_vals[..., :, None]
 
+    rgb_coarse, disp_coarse, acc_coarse,seg_coarse = None, None, None,None
     if getattr(options.nerf, mode).is_seg:
         radiance_field = run_network(
         model_coarse,
@@ -85,13 +86,14 @@ def predict_and_render_radiance(
         acc_coarse,
         weights,
         depth_coarse,
-        seg_course
+        seg_coarse
         ) = volume_render_radiance_field_with_seg(
         radiance_field,
         z_vals,
         rd,
         radiance_field_noise_std=getattr(options.nerf, mode).radiance_field_noise_std,
         white_background=getattr(options.nerf, mode).white_background,
+        is_color=getattr(options.nerf, mode).is_color
         )
     else:
         radiance_field = run_network(
@@ -117,7 +119,7 @@ def predict_and_render_radiance(
             white_background=getattr(options.nerf, mode).white_background,
         )
 
-    rgb_fine, disp_fine, acc_fine = None, None, None
+    rgb_fine, disp_fine, acc_fine,seg_fine = None, None, None,None
     if getattr(options.nerf, mode).num_fine > 0:
         # rgb_map_0, disp_map_0, acc_map_0 = rgb_map, disp_map, acc_map
 
@@ -142,12 +144,13 @@ def predict_and_render_radiance(
             encode_position_fn,
             encode_direction_fn,
             )
-            rgb_fine, disp_fine, acc_fine, _, _,seg_fine = volume_render_radiance_field(
+            rgb_fine, disp_fine, acc_fine, _, _,seg_fine = volume_render_radiance_field_with_seg(
             radiance_field,
             z_vals,
             rd,
             radiance_field_noise_std=getattr(options.nerf, mode).radiance_field_noise_std,
             white_background=getattr(options.nerf, mode).white_background,
+            is_color=getattr(options.nerf, mode).is_color
             )
         else:    
             radiance_field = run_network(
@@ -168,7 +171,7 @@ def predict_and_render_radiance(
                 white_background=getattr(options.nerf, mode).white_background,
             )
 
-    return rgb_coarse, disp_coarse, acc_coarse, rgb_fine, disp_fine, acc_fine,seg_course,seg_fine
+    return rgb_coarse, disp_coarse, acc_coarse, rgb_fine, disp_fine, acc_fine,seg_coarse,seg_fine
 
 
 def run_one_iter_of_nerf(

@@ -193,7 +193,7 @@ def main():
             target_ray_values = target_ray_values[select_inds].to(device)
             # ray_bundle = torch.stack([ray_origins, ray_directions], dim=0).to(device)
 
-            rgb_coarse, _, _, rgb_fine, _, _ = run_one_iter_of_nerf(
+            rgb_coarse, _, _, rgb_fine, _, _,seg_coarse,seg_fine = run_one_iter_of_nerf(
                 cache_dict["height"],
                 cache_dict["width"],
                 cache_dict["focal_length"],
@@ -226,7 +226,7 @@ def main():
             target_s = img_target[select_inds[:, 0], select_inds[:, 1], :]
 
             then = time.time()
-            rgb_coarse, _, _, rgb_fine, _, _ = run_one_iter_of_nerf(
+            rgb_coarse, _, _, rgb_fine, _, _,seg_coarse,seg_fine = run_one_iter_of_nerf(
                 H,
                 W,
                 focal,
@@ -241,14 +241,16 @@ def main():
             )
             target_ray_values = target_s
 
+        #TODO: Have to input target seg maps and modify 
         coarse_loss = torch.nn.functional.mse_loss(
             rgb_coarse[..., :3], target_ray_values[..., :3]
-        )
+        ) + torch.nn.CrossEntropyLoss(seg_coarse[..., :3], target_ray_values[..., :3])
         fine_loss = None
         if rgb_fine is not None:
             fine_loss = torch.nn.functional.mse_loss(
                 rgb_fine[..., :3], target_ray_values[..., :3]
-            )
+            ) + torch.nn.CrossEntropyLoss(seg_fine[..., :3], target_ray_values[..., :3])
+        
         # loss = torch.nn.functional.mse_loss(rgb_pred[..., :3], target_s[..., :3])
         loss = 0.0
         # if fine_loss is not None:
