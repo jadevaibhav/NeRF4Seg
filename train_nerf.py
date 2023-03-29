@@ -11,7 +11,7 @@ from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm, trange
 
 from nerf import (CfgNode, get_embedding_function, get_ray_bundle, img2mse,
-                  load_blender_data, load_llff_data, meshgrid_xy, models,
+                  load_blender_data, load_llff_data, models,
                   mse2psnr, run_one_iter_of_nerf)
 
 
@@ -65,8 +65,8 @@ def main():
             if cfg.nerf.train.white_background:
                 images = images[..., :3] * images[..., -1:] + (1.0 - images[..., -1:])
         elif cfg.dataset.type.lower() == "llff":
-            images, poses, bds, render_poses, i_test = load_llff_data(
-                cfg.dataset.basedir, factor=cfg.dataset.downsample_factor
+            images, poses, bds, render_poses, i_test, masks = load_llff_data(
+                cfg.dataset.basedir, factor=cfg.dataset.downsample_factor, is_seg=cfg.dataset.is_seg
             )
             hwf = poses[0, :3, -1]
             poses = poses[:, :3, :4]
@@ -87,7 +87,8 @@ def main():
             hwf = [H, W, focal]
             images = torch.from_numpy(images)
             poses = torch.from_numpy(poses)
-
+            if masks != None:
+                masks = torch.from_numpy(masks)
     # Seed experiment for repeatability
     seed = cfg.experiment.randomseed
     np.random.seed(seed)
@@ -212,8 +213,8 @@ def main():
             pose_target = poses[img_idx, :3, :4].to(device)
             ray_origins, ray_directions = get_ray_bundle(H, W, focal, pose_target)
             coords = torch.stack(
-                meshgrid_xy(torch.arange(H).to(device), torch.arange(W).to(device)),
-                dim=-1,
+                torch.meshgrid(torch.arange(H).to(device), torch.arange(W).to(device), indexing='xy'),
+                dim=-1, 
             )
             coords = coords.reshape((-1, 2))
             select_inds = np.random.choice(
