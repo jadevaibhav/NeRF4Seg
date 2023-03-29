@@ -93,7 +93,7 @@ def predict_and_render_radiance(
         rd,
         radiance_field_noise_std=getattr(options.nerf, mode).radiance_field_noise_std,
         white_background=getattr(options.nerf, mode).white_background,
-        is_color=getattr(options.nerf, mode).is_color
+        is_color=getattr(options.dataset,'is_color')
         )
     else:
         radiance_field = run_network(
@@ -150,7 +150,7 @@ def predict_and_render_radiance(
             rd,
             radiance_field_noise_std=getattr(options.nerf, mode).radiance_field_noise_std,
             white_background=getattr(options.nerf, mode).white_background,
-            is_color=getattr(options.nerf, mode).is_color
+            is_color=getattr(options.dataset,'is_color')
             )
         else:    
             radiance_field = run_network(

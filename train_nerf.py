@@ -87,7 +87,7 @@ def main():
             hwf = [H, W, focal]
             images = torch.from_numpy(images)
             poses = torch.from_numpy(poses)
-            if masks != None:
+            if masks is not None:
                 masks = torch.from_numpy(masks)
     # Seed experiment for repeatability
     seed = cfg.experiment.randomseed
@@ -245,12 +245,12 @@ def main():
         #TODO: Have to input target seg maps and modify 
         coarse_loss = torch.nn.functional.mse_loss(
             rgb_coarse[..., :3], target_ray_values[..., :3]
-        ) + torch.nn.CrossEntropyLoss(seg_coarse[..., :3], target_ray_values[..., :3])
+        ) + torch.nn.CrossEntropyLoss(seg_coarse[..., :3], masks[..., :3])
         fine_loss = None
         if rgb_fine is not None:
             fine_loss = torch.nn.functional.mse_loss(
                 rgb_fine[..., :3], target_ray_values[..., :3]
-            ) + torch.nn.CrossEntropyLoss(seg_fine[..., :3], target_ray_values[..., :3])
+            ) + torch.nn.CrossEntropyLoss(seg_fine[..., :3], masks[..., :3])
         
         # loss = torch.nn.functional.mse_loss(rgb_pred[..., :3], target_s[..., :3])
         loss = 0.0
