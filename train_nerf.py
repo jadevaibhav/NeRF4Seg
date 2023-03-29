@@ -65,8 +65,8 @@ def main():
             if cfg.nerf.train.white_background:
                 images = images[..., :3] * images[..., -1:] + (1.0 - images[..., -1:])
         elif cfg.dataset.type.lower() == "llff":
-            images, poses, bds, render_poses, i_test = load_llff_data(
-                cfg.dataset.basedir, factor=cfg.dataset.downsample_factor
+            images, poses, bds, render_poses, i_test, masks = load_llff_data(
+                cfg.dataset.basedir, factor=cfg.dataset.downsample_factor, is_seg=cfg.dataset.is_seg
             )
             hwf = poses[0, :3, -1]
             poses = poses[:, :3, :4]
@@ -87,7 +87,8 @@ def main():
             hwf = [H, W, focal]
             images = torch.from_numpy(images)
             poses = torch.from_numpy(poses)
-
+            if masks != None:
+                masks = torch.from_numpy(masks)
     # Seed experiment for repeatability
     seed = cfg.experiment.randomseed
     np.random.seed(seed)

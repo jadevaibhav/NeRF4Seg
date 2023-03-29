@@ -320,6 +320,9 @@ def _load_seg_masks(basedir, factor=None, width=None, height=None):
             for mask in mask_values:
                 mask_rescaled = skt.resize(mask, (mask.shape[0]/factor, mask.shape[1]/factor, mask.shape[-1]), anti_aliasing=False)
                 scaled_masks.append(mask_rescaled)
+                np.save(os.path.join(os.path.join(basedir, f"masks_{scale_type}"), f"masks_{scale_type}.npy"), scaled_masks)
+        else: 
+            scaled_masks = np.load(os.path.join(os.path.join(basedir, f'masks_{scale_type}'), f'masks_{scale_type}.npy'))
                 
     elif height!=None and width!=None:
         scale_type = f"{width}_{height}"
@@ -328,15 +331,15 @@ def _load_seg_masks(basedir, factor=None, width=None, height=None):
             for mask in mask_values:
                 mask_rescaled = skt.resize(mask, (width, height, mask.shape[-1]), anti_aliasing=False)
                 scaled_masks.append(mask_rescaled)
-                
-    else:   
+                np.save(os.path.join(os.path.join(basedir, f"masks_{scale_type}"), f"masks_{scale_type}.npy"), scaled_masks)
+        else: 
+            scaled_masks = np.load(os.path.join(os.path.join(basedir, f'masks_{scale_type}'), f'masks_{scale_type}.npy'))      
+    else:  
         scale_type = None    
         scaled_masks = mask_values
 
-    if scale_type!=None:
-        np.save(os.path.join(os.path.join(basedir, f"masks_{scale_type}"), f"masks_{scale_type}.npy"), scaled_masks)
-        
 
+    scaled_masks = np.asarray(scaled_masks)
     return scaled_masks
 
 def load_llff_data(
@@ -348,12 +351,14 @@ def load_llff_data(
     )  # factor=8 downsamples original imgs by 8x
     print("Loaded", basedir, bds.min(), bds.max())
 
+    #pass none if is_seg=False
+    masks = None
     if is_seg:
-    #returns list of mask arrays
+    #returns np array of mask arrays
         masks = _load_seg_masks(
             basedir, factor=factor
         )
-        print("MASKS LOADED: \n", len(masks))
+        print("MASKS LOADED: \n", masks.shape)
 
     # Correct rotation matrix ordering and move variable dim to axis 0
     poses = np.concatenate([poses[:, 1:2, :], -poses[:, 0:1, :], poses[:, 2:, :]], 1)
@@ -422,4 +427,7 @@ def load_llff_data(
     images = images.astype(np.float32)
     poses = poses.astype(np.float32)
     print('................................................................LOAD_LLFF_DATA WORKING....................................................................')
-    return images, poses, bds, render_poses, i_test
+
+    
+    return images, poses, bds, render_poses, i_test, masks
+    

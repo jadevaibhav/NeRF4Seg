@@ -35,6 +35,8 @@ dataset:
   downsample_factor: 8
   # TODO: Add description
   llffhold: 8
+  # send segmentation masks
+  is_seg: True
 
 # Model parameters.
 models:
