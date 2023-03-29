@@ -35,7 +35,10 @@ dataset:
   downsample_factor: 8
   # TODO: Add description
   llffhold: 8
-
+  # send segmentation masks
+  is_seg: True
+  # Using color rendering for segmentation
+  is_color: True
 # Model parameters.
 models:
   # Coarse model.
@@ -136,10 +139,7 @@ nerf:
     radiance_field_noise_std: 1.
     # Sample linearly in disparity space, as opposed to in depth space.
     lindisp: False
-    # Flag for enabling segmentation
-    is_seg: True
-    # Using color rendering for segmentation
-    is_color: True
+    
   # Validation-specific parameters.
   validation:
     # Number of random rays to retain from each image.
@@ -158,7 +158,4 @@ nerf:
     radiance_field_noise_std: 0.
     # Sample linearly in disparity space, as opposed to in depth space.
     lindisp: False
-    # Flag for enabling segmentation
-    is_seg: True
-    # Using color rendering for segmentation
-    is_color: True
+    
