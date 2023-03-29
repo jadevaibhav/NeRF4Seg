@@ -70,7 +70,7 @@ def predict_and_render_radiance(
     pts = ro[..., None, :] + rd[..., None, :] * z_vals[..., :, None]
 
     rgb_coarse, disp_coarse, acc_coarse,seg_coarse = None, None, None,None
-    if getattr(options.nerf, mode).is_seg:
+    if getattr(options.dataset,'is_seg'):
         radiance_field = run_network(
         model_coarse,
         pts,
@@ -135,7 +135,7 @@ def predict_and_render_radiance(
         z_vals, _ = torch.sort(torch.cat((z_vals, z_samples), dim=-1), dim=-1)
         # pts -> (N_rays, N_samples + N_importance, 3)
         pts = ro[..., None, :] + rd[..., None, :] * z_vals[..., :, None]
-        if getattr(options.nerf, mode).is_seg:
+        if getattr(options.dataset,'is_seg'):
             radiance_field = run_network(
             model_fine,
             pts,
