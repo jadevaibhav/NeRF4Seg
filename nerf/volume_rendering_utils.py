@@ -84,7 +84,7 @@ def volume_render_radiance_field_with_seg(
     if radiance_field_noise_std > 0.0:
         noise = (
             torch.randn(
-                radiance_field[..., 3:].shape,
+                radiance_field[..., 3:4].shape,
                 dtype=radiance_field.dtype,
                 device=radiance_field.device,
             )
@@ -126,15 +126,16 @@ def seg_3d(radiance_field,dists,noise,is_color=True):
     alpha = 1.0 - torch.exp(-sigma_a * dists.unsqueeze(-1))
     # dim -2 is num_samples along the ray, along which cumprod is taken
     seg_map = alpha * cumprod_exclusive(1.0 - alpha + 1e-10,dim=-2)
-    seg_map = torch.nn.LogSoftmax(seg_map,dim=-1)
-
+    seg_map = seg_map.sum(dim=-2)
+    seg_map = torch.nn.functional.log_softmax(seg_map,dim=-1)
+    #print("seg map and alpha shape:",seg_map.shape,alpha.shape)
     #For color rendering, we sum the sigma for all classes
     weights = None
     if is_color:
-        print("RF and noise",torch.sum(radiance_field[..., 3:],dim=-1,keepdim=True).shape,noise.shape)
+        #print("RF and noise",torch.sum(radiance_field[..., 3:],dim=-1,keepdim=True).shape,noise.shape)
         sigma_a = torch.nn.functional.relu(torch.sum(radiance_field[..., 3:],dim=-1) + noise.squeeze(-1))
         alpha = 1.0 - torch.exp(-sigma_a * dists)
         weights = alpha * cumprod_exclusive(1.0 - alpha + 1e-10)
-
+        print("apha and weights rgb",alpha.shape,weights.shape)
     return seg_map, weights
     

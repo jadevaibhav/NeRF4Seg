@@ -267,7 +267,7 @@ class FlexibleNeRFModelSeg(torch.nn.Module):
         include_input_dir=True,
         use_viewdirs=True,
     ):
-        super(FlexibleNeRFModel, self).__init__()
+        super(FlexibleNeRFModelSeg, self).__init__()
 
         include_input_xyz = 3 if include_input_xyz else 0
         include_input_dir = 3 if include_input_dir else 0

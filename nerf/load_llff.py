@@ -86,9 +86,10 @@ def _minify(basedir, factors=[], resolutions=[]):
 def _load_data(basedir, factor=None, width=None, height=None, load_imgs=True):
 
     poses_arr = np.load(os.path.join(basedir, "poses_bounds.npy"))
-    poses = poses_arr[:, :-2].reshape([-1, 3, 5]).transpose([1, 2, 0])
-    bds = poses_arr[:, -2:].transpose([1, 0])
-
+    poses = poses_arr[:, :-2].reshape([-1, 3, 5]).transpose([1, 2, 0])[...,:4]
+    bds = poses_arr[:, -2:].transpose([1, 0])[:,:4]
+    #print("poses and bds",poses.shape,bds.shape)
+    
     img0 = [
         os.path.join(basedir, "images", f)
         for f in sorted(os.listdir(os.path.join(basedir, "images")))
@@ -339,7 +340,7 @@ def _load_seg_masks(basedir, factor=None, width=None, height=None):
         scaled_masks = mask_values
 
 
-    scaled_masks = np.asarray(scaled_masks)
+    scaled_masks = np.asarray(scaled_masks).transpose((0,2,1,3))
     return scaled_masks
 
 def load_llff_data(
