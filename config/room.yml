@@ -44,7 +44,7 @@ models:
   # Coarse model.
   coarse:
     # Name of the torch.nn.Module class that implements the model.
-    type: FlexibleNeRFModel
+    type: FlexibleNeRFModelSeg
     # Number of layers in the model.
     num_layers: 4
     # Number of hidden units in each layer of the MLP (multi-layer
@@ -71,7 +71,7 @@ models:
   # Fine model.
   fine:
     # Name of the torch.nn.Module class that implements the model.
-    type: FlexibleNeRFModel
+    type: FlexibleNeRFModelSeg
     # Number of layers in the model.
     num_layers: 4
     # Number of hidden units in each layer of the MLP (multi-layer
