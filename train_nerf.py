@@ -87,8 +87,10 @@ def main():
             hwf = [H, W, focal]
             images = torch.from_numpy(images)
             poses = torch.from_numpy(poses)
+            
             if masks is not None:
                 masks = torch.from_numpy(masks)
+               
     # Seed experiment for repeatability
     seed = cfg.experiment.randomseed
     np.random.seed(seed)
@@ -210,8 +212,11 @@ def main():
         else:
             img_idx = np.random.choice(i_train)
             img_target = images[img_idx].to(device)
+            #print("img_target",img_target.shape)
+            print("img_idx",img_idx)
             #shuffling masks using same index
-            masks = masks[img_idx].to(device)
+            t_masks = masks[img_idx].to(device)
+            print("masks random choice",masks.shape)
 
             pose_target = poses[img_idx, :3, :4].to(device)
             ray_origins, ray_directions = get_ray_bundle(H, W, focal, pose_target)
@@ -223,6 +228,7 @@ def main():
             select_inds = np.random.choice(
                 coords.shape[0], size=(cfg.nerf.train.num_random_rays), replace=False
             )
+            print("select inds",select_inds)
             select_inds = coords[select_inds]
             ray_origins = ray_origins[select_inds[:, 0], select_inds[:, 1], :]
             ray_directions = ray_directions[select_inds[:, 0], select_inds[:, 1], :]
@@ -230,8 +236,12 @@ def main():
             target_s = img_target[select_inds[:, 0], select_inds[:, 1], :]
             print("img_target and target_s",img_target.shape,target_s.shape)
             # reshaping masks in same way as images
-            
-            target_masks = masks[select_inds[:, 0], select_inds[:, 1], :]
+
+            #print("masks shape here",masks.shape)
+            if len(t_masks.shape) == 2:
+                t_masks = torch.nn.functional.one_hot(t_masks,num_classes=59)
+                print("masks shape",masks.shape)
+            target_masks = t_masks[select_inds[:, 0], select_inds[:, 1], :].to(torch.float32)
             print("masks shape and target:",masks.shape,target_masks.shape)
 
             then = time.time()

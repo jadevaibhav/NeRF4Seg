@@ -7,13 +7,13 @@ experiment:
   # Seed for random number generators (for repeatability).
   randomseed: 34  # 8239
   # Number of training iterations.
-  train_iters: 10
+  train_iters: 250000
   # Number of training iterations after which to validate.
-  validate_every: 1
+  validate_every: 50
   # Number of training iterations after which to checkpoint.
-  save_every: 1
+  save_every: 5000
   # Number of training iterations after which to print progress.
-  print_every: 1
+  print_every: 100
 
 # Dataset parameters.
 dataset:
