@@ -119,6 +119,9 @@ def seg_3d(radiance_field,dists,noise,is_color=True):
         Returns:
           seg_map: semantic segmentation map
           weights: weights to use for color rendering
+
+        v1: is color with summing sigma
+        v2: is color with argmax
         """
     #segmentation mask rendering
     sigma_a = torch.nn.functional.relu(radiance_field[..., 3:] + noise)
@@ -134,6 +137,7 @@ def seg_3d(radiance_field,dists,noise,is_color=True):
     if is_color:
         #print("RF and noise",torch.sum(radiance_field[..., 3:],dim=-1,keepdim=True).shape,noise.shape)
         sigma_a = torch.nn.functional.relu(torch.sum(radiance_field[..., 3:],dim=-1) + noise.squeeze(-1))
+        #sigma_a = torch.nn.functional.relu(torch.argmax(radiance_field[..., 3:],dim=-1) + noise.squeeze(-1))
         alpha = 1.0 - torch.exp(-sigma_a * dists)
         weights = alpha * cumprod_exclusive(1.0 - alpha + 1e-10)
         print("apha and weights rgb",alpha.shape,weights.shape)
