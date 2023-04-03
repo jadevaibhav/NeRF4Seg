@@ -306,38 +306,44 @@ def spherify_poses(poses, bds):
 
 
 def _load_seg_masks(basedir, factor=None, width=None, height=None):
-    mask_dir = os.path.join(basedir, 'segmentation_masks')
-    mask_names = [m for m in sorted(os.listdir(mask_dir)) if m.endswith("npy")]
-
-    masks = [os.path.join(mask_dir, i) for i in mask_names]
-    mask_values = [np.load(i) for i in masks]
-
-    scaled_masks = []
 
     if factor!=None:
         scale_type = factor
-        if not os.path.exists(os.path.join(basedir, f'masks_{scale_type}')):
-            os.mkdir(os.path.join(basedir, f'masks_{scale_type}'))
-            for mask in mask_values:
-                mask_rescaled = skt.resize(mask, (mask.shape[0]/factor, mask.shape[1]/factor, mask.shape[-1]), anti_aliasing=False)
-                scaled_masks.append(mask_rescaled)
-                np.save(os.path.join(os.path.join(basedir, f"masks_{scale_type}"), f"masks_{scale_type}.npy"), scaled_masks)
-        else: 
+        if os.path.exists(os.path.join(basedir, f'masks_{scale_type}')):
             scaled_masks = np.load(os.path.join(os.path.join(basedir, f'masks_{scale_type}'), f'masks_{scale_type}.npy'))
-                
-    elif height!=None and width!=None:
-        scale_type = f"{width}_{height}"
-        if not os.path.exists(os.path.join(basedir, f'masks_{scale_type}')):
-            os.mkdir(os.path.join(basedir, f'masks_{scale_type}'))
-            for mask in mask_values:
-                mask_rescaled = skt.resize(mask, (width, height, mask.shape[-1]), anti_aliasing=False)
-                scaled_masks.append(mask_rescaled)
-                np.save(os.path.join(os.path.join(basedir, f"masks_{scale_type}"), f"masks_{scale_type}.npy"), scaled_masks)
-        else: 
-            scaled_masks = np.load(os.path.join(os.path.join(basedir, f'masks_{scale_type}'), f'masks_{scale_type}.npy'))      
-    else:  
-        scale_type = None    
-        scaled_masks = mask_values
+        else:
+            mask_dir = os.path.join(basedir, 'segmentation_masks')
+            mask_names = [m for m in sorted(os.listdir(mask_dir)) if m.endswith("npy")]
+
+            masks = [os.path.join(mask_dir, i) for i in mask_names]
+            mask_values = [np.load(i) for i in masks]
+
+            scaled_masks = []
+
+            if factor!=None:
+                scale_type = factor
+                if not os.path.exists(os.path.join(basedir, f'masks_{scale_type}')):
+                    os.mkdir(os.path.join(basedir, f'masks_{scale_type}'))
+                    for mask in mask_values:
+                        mask_rescaled = skt.resize(mask, (mask.shape[0]/factor, mask.shape[1]/factor, mask.shape[-1]), anti_aliasing=False)
+                        scaled_masks.append(mask_rescaled)
+                        np.save(os.path.join(os.path.join(basedir, f"masks_{scale_type}"), f"masks_{scale_type}.npy"), scaled_masks)
+                else: 
+                    scaled_masks = np.load(os.path.join(os.path.join(basedir, f'masks_{scale_type}'), f'masks_{scale_type}.npy'))
+                        
+            elif height!=None and width!=None:
+                scale_type = f"{width}_{height}"
+                if not os.path.exists(os.path.join(basedir, f'masks_{scale_type}')):
+                    os.mkdir(os.path.join(basedir, f'masks_{scale_type}'))
+                    for mask in mask_values:
+                        mask_rescaled = skt.resize(mask, (width, height, mask.shape[-1]), anti_aliasing=False)
+                        scaled_masks.append(mask_rescaled)
+                        np.save(os.path.join(os.path.join(basedir, f"masks_{scale_type}"), f"masks_{scale_type}.npy"), scaled_masks)
+                else: 
+                    scaled_masks = np.load(os.path.join(os.path.join(basedir, f'masks_{scale_type}'), f'masks_{scale_type}.npy'))      
+            else:  
+                scale_type = None    
+                scaled_masks = mask_values
 
     
     scaled_masks = np.asarray(scaled_masks)#.transpose((0,2,1))

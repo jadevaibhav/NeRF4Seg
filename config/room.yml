@@ -20,7 +20,7 @@ dataset:
   # Type of the dataset (Blender vs LLFF vs DeepVoxels vs something else)
   type: llff
   # Base directory of dataset.
-  basedir: data\nerf_llff_data-20230309T215124Z-001\nerf_llff_data\room
+  basedir: data/room
   # Optionally, provide a path to the pre-cached dataset dir. This
   # overrides the other dataset options.
   # cachedir: cache/legocache200

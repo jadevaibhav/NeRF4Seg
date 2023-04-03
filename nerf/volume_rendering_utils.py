@@ -127,7 +127,7 @@ def seg_3d(radiance_field,dists,noise,is_color=True):
     # dim -2 is num_samples along the ray, along which cumprod is taken
     seg_map = alpha * cumprod_exclusive(1.0 - alpha + 1e-10,dim=-2)
     seg_map = seg_map.sum(dim=-2)
-    seg_map = torch.nn.functional.log_softmax(seg_map,dim=-1)
+    seg_map = torch.nn.functional.softmax(seg_map,dim=-1)
     #print("seg map and alpha shape:",seg_map.shape,alpha.shape)
     #For color rendering, we sum the sigma for all classes
     weights = None

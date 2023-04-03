@@ -262,17 +262,18 @@ def main():
 
         #TODO: Have to input target seg maps and modify 
         #print("seg coarse and mask",seg_coarse.shape,target_masks.shape)
+        #print("mask pred and target sample",seg_coarse[0],target_masks[0])
         #print("rgb coarse and fine",rgb_coarse.shape,rgb_fine.shape)
         coarse_seg_loss = torch.nn.functional.cross_entropy(seg_coarse[..., :], target_masks[..., :])
         coarse_loss = torch.nn.functional.mse_loss(
             rgb_coarse[..., :3], target_ray_values[..., :3]
-        ) + 0.5*coarse_seg_loss
+        ) + coarse_seg_loss
         fine_loss = None
         if rgb_fine is not None:
             fine_seg_loss = torch.nn.functional.cross_entropy(seg_fine[..., :], target_masks[..., :])
             fine_loss = torch.nn.functional.mse_loss(
                 rgb_fine[..., :3], target_ray_values[..., :3]
-            ) + 0.5*fine_seg_loss 
+            ) + fine_seg_loss 
         
         # loss = torch.nn.functional.mse_loss(rgb_pred[..., :3], target_s[..., :3])
         loss = 0.0
@@ -303,7 +304,11 @@ def main():
                 + " PSNR: "
                 + str(psnr)
                 + " segmentation loss: "
-                + str(0.5*(coarse_seg_loss+fine_seg_loss).item())
+                + str((coarse_seg_loss+fine_seg_loss).item())
+                + " MSE loss: "
+                + str((loss - (coarse_seg_loss+fine_seg_loss)).item())
+                + " sample pred: "
+                + str(seg_coarse[0].tolist())
 
             )
         writer.add_scalar("train/loss", loss.item(), i)
