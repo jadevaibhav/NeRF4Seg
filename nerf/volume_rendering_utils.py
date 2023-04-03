@@ -136,6 +136,6 @@ def seg_3d(radiance_field,dists,noise,is_color=True):
         sigma_a = torch.nn.functional.relu(torch.sum(radiance_field[..., 3:],dim=-1) + noise.squeeze(-1))
         alpha = 1.0 - torch.exp(-sigma_a * dists)
         weights = alpha * cumprod_exclusive(1.0 - alpha + 1e-10)
-        print("apha and weights rgb",alpha.shape,weights.shape)
+        #print("apha and weights rgb",alpha.shape,weights.shape)
     return seg_map, weights
     
