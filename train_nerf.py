@@ -265,13 +265,13 @@ def main():
         #print("mask pred and target sample",seg_coarse[0],target_masks[0])
         #print("rgb coarse and fine",rgb_coarse.shape,rgb_fine.shape)
         coarse_seg_loss = torch.nn.functional.cross_entropy(seg_coarse[..., :], target_masks[..., :])
-        coarse_loss = torch.nn.functional.mse_loss(
+        coarse_loss = 100*torch.nn.functional.mse_loss(
             rgb_coarse[..., :3], target_ray_values[..., :3]
         ) + coarse_seg_loss
         fine_loss = None
         if rgb_fine is not None:
             fine_seg_loss = torch.nn.functional.cross_entropy(seg_fine[..., :], target_masks[..., :])
-            fine_loss = torch.nn.functional.mse_loss(
+            fine_loss = 100*torch.nn.functional.mse_loss(
                 rgb_fine[..., :3], target_ray_values[..., :3]
             ) + fine_seg_loss 
         
@@ -313,9 +313,12 @@ def main():
             )
         writer.add_scalar("train/loss", loss.item(), i)
         writer.add_scalar("train/coarse_loss", coarse_loss.item(), i)
+        writer.add_scalar("train/coarse_seg_loss", coarse_seg_loss.item(), i)
         if rgb_fine is not None:
             writer.add_scalar("train/fine_loss", fine_loss.item(), i)
+            writer.add_scalar("train/fine_seg_loss", fine_seg_loss.item(), i)
         writer.add_scalar("train/psnr", psnr, i)
+        
 
         # Validation
         if (
@@ -329,7 +332,7 @@ def main():
 
             start = time.time()
             with torch.no_grad():
-                rgb_coarse, rgb_fine = None, None
+                rgb_coarse, rgb_fine,seg_coarse,seg_fine = None, None, None, None
                 target_ray_values = None
                 if USE_CACHED_DATASET:
                     datafile = np.random.choice(validation_paths)
@@ -369,10 +372,10 @@ def main():
                         encode_direction_fn=encode_direction_fn,
                     )
                     target_ray_values = img_target
-                coarse_loss = img2mse(rgb_coarse[..., :3], target_ray_values[..., :3])
+                coarse_loss = img2mse(rgb_coarse[..., :3], target_ray_values[..., :3]) #+ torch.nn.functional.cross_entropy(seg_coarse[...,:],target_mask[...,:])
                 loss, fine_loss = 0.0, 0.0
                 if rgb_fine is not None:
-                    fine_loss = img2mse(rgb_fine[..., :3], target_ray_values[..., :3])
+                    fine_loss = img2mse(rgb_fine[..., :3], target_ray_values[..., :3]) #+ torch.nn.functional.cross_entropy(seg_fine[...,:],target_mask[...,:])
                     loss = fine_loss
                 else:
                     loss = coarse_loss
@@ -381,6 +384,7 @@ def main():
                 writer.add_scalar("validation/loss", loss.item(), i)
                 writer.add_scalar("validation/coarse_loss", coarse_loss.item(), i)
                 writer.add_scalar("validataion/psnr", psnr, i)
+                writer.add_scalar("validation/coarse_seg_loss", coarse_seg_loss.item(), i)
                 writer.add_image(
                     "validation/rgb_coarse", cast_to_image(rgb_coarse[..., :3]), i
                 )
@@ -389,6 +393,7 @@ def main():
                         "validation/rgb_fine", cast_to_image(rgb_fine[..., :3]), i
                     )
                     writer.add_scalar("validation/fine_loss", fine_loss.item(), i)
+                    writer.add_scalar("validation/fine_seg_loss", fine_seg_loss.item(), i)
                 writer.add_image(
                     "validation/img_target",
                     cast_to_image(target_ray_values[..., :3]),

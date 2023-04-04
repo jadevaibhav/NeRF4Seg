@@ -119,21 +119,27 @@ def seg_3d(radiance_field,dists,noise,is_color=True):
         Returns:
           seg_map: semantic segmentation map
           weights: weights to use for color rendering
+
+        v1: is color with summing sigma
+        v2: is color with argmax
+        v3: additional class label with softmax at each point
+        current: v2+v3 (removing seg softmax is giving bit better results, final to be seen)
         """
     #segmentation mask rendering
     sigma_a = torch.nn.functional.relu(radiance_field[..., 3:] + noise)
-   
+    classes = torch.nn.functional.softmax(sigma_a,dim=-1)
     alpha = 1.0 - torch.exp(-sigma_a * dists.unsqueeze(-1))
     # dim -2 is num_samples along the ray, along which cumprod is taken
-    seg_map = alpha * cumprod_exclusive(1.0 - alpha + 1e-10,dim=-2)
+    seg_map = alpha * cumprod_exclusive(1.0 - alpha + 1e-10,dim=-2)*classes
     seg_map = seg_map.sum(dim=-2)
-    seg_map = torch.nn.functional.softmax(seg_map,dim=-1)
+    #seg_map = torch.nn.functional.softmax(seg_map,dim=-1)
     #print("seg map and alpha shape:",seg_map.shape,alpha.shape)
     #For color rendering, we sum the sigma for all classes
     weights = None
     if is_color:
         #print("RF and noise",torch.sum(radiance_field[..., 3:],dim=-1,keepdim=True).shape,noise.shape)
-        sigma_a = torch.nn.functional.relu(torch.sum(radiance_field[..., 3:],dim=-1) + noise.squeeze(-1))
+        #sigma_a = torch.nn.functional.relu(torch.sum(radiance_field[..., 3:],dim=-1) + noise.squeeze(-1))
+        sigma_a = torch.max(torch.nn.functional.relu(radiance_field[..., 3:] + noise),dim=-1).values
         alpha = 1.0 - torch.exp(-sigma_a * dists)
         weights = alpha * cumprod_exclusive(1.0 - alpha + 1e-10)
         #print("apha and weights rgb",alpha.shape,weights.shape)
