@@ -171,7 +171,7 @@ def predict_and_render_radiance(
                 white_background=getattr(options.nerf, mode).white_background,
             )
 
-    return rgb_coarse, disp_coarse, acc_coarse, rgb_fine, disp_fine, acc_fine,seg_coarse,seg_fine
+    return rgb_coarse, disp_coarse, acc_coarse,seg_coarse, rgb_fine, disp_fine, acc_fine,seg_fine
 
 
 def run_one_iter_of_nerf(
@@ -195,12 +195,14 @@ def run_one_iter_of_nerf(
         viewdirs = viewdirs.view((-1, 3))
     # Cache shapes now, for later restoration.
     restore_shapes = [
-        ray_directions.shape,
+        list(ray_directions.shape[:-1])+[-1],
         ray_directions.shape[:-1],
         ray_directions.shape[:-1],
+        list(ray_directions.shape[:-1])+[-1],
     ]
     if model_fine:
         restore_shapes += restore_shapes
+        print('restore_shape',len(restore_shapes))
     if options.dataset.no_ndc is False:
         ro, rd = ndc_rays(height, width, focal_length, 1.0, ray_origins, ray_directions)
         ro = ro.view((-1, 3))
@@ -233,7 +235,6 @@ def run_one_iter_of_nerf(
     ]
     if mode == 'validation':
         print('render images', synthesized_images[0].shape)
-        
     if mode == "validation":
         synthesized_images = [
             image.view(shape) if image is not None else None
@@ -243,6 +244,9 @@ def run_one_iter_of_nerf(
         # Returns rgb_coarse, disp_coarse, acc_coarse, rgb_fine, disp_fine, acc_fine
         # (assuming both the coarse and fine networks are used).
         if model_fine:
+            if mode == 'validation':
+                print(len(synthesized_images))
+                print('final val image',synthesized_images[0].shape)
             return tuple(synthesized_images)
         else:
             # If the fine network is not used, rgb_fine, disp_fine, acc_fine are

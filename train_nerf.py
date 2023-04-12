@@ -245,7 +245,7 @@ def main():
             #print("masks shape and target:",masks.shape,target_masks.shape)
 
             then = time.time()
-            rgb_coarse, _, _, rgb_fine, _, _,seg_coarse,seg_fine = run_one_iter_of_nerf(
+            rgb_coarse, _, _,seg_coarse, rgb_fine, _, _,seg_fine = run_one_iter_of_nerf(
                 H,
                 W,
                 focal,
@@ -339,7 +339,7 @@ def main():
                 if USE_CACHED_DATASET:
                     datafile = np.random.choice(validation_paths)
                     cache_dict = torch.load(datafile)
-                    rgb_coarse, _, _, rgb_fine, _, _ = run_one_iter_of_nerf(
+                    rgb_coarse, _, _,seg_coarse, rgb_fine, _, _,seg_fine = run_one_iter_of_nerf(
                         cache_dict["height"],
                         cache_dict["width"],
                         cache_dict["focal_length"],
