@@ -421,9 +421,10 @@ def load_llff_data(
         render_poses = render_path_spiral(
             c2w_path, up, rads, focal, zdelta, zrate=0.5, rots=N_rots, N=N_views
         )
+        print("spiral path rendered poses")
 
     render_poses = np.array(render_poses).astype(np.float32)
-
+    print(render_poses.shape)
     c2w = poses_avg(poses)
     print("Data:")
     print(poses.shape, images.shape, bds.shape)

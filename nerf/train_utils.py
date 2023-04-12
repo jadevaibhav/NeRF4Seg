@@ -231,6 +231,9 @@ def run_one_iter_of_nerf(
         torch.cat(image, dim=0) if image[0] is not None else (None)
         for image in synthesized_images
     ]
+    if mode == 'validation':
+        print('render images', synthesized_images[0].shape)
+        
     if mode == "validation":
         synthesized_images = [
             image.view(shape) if image is not None else None

@@ -1,7 +1,7 @@
 # Parameters to setup experiment.
 experiment:
   # Unique experiment identifier
-  id: room-seg-class-color-max-without-softmax
+  id: room-sep-sigma-without-softmax5
   # Experiment logs will be stored at "logdir"/"id"
   logdir: logs
   # Seed for random number generators (for repeatability).
@@ -44,7 +44,7 @@ models:
   # Coarse model.
   coarse:
     # Name of the torch.nn.Module class that implements the model.
-    type: FlexibleNeRFModelSeg
+    type: FlexibleNeRFModelSegClass
     # Number of layers in the model.
     num_layers: 4
     # Number of hidden units in each layer of the MLP (multi-layer
@@ -71,7 +71,7 @@ models:
   # Fine model.
   fine:
     # Name of the torch.nn.Module class that implements the model.
-    type: FlexibleNeRFModelSeg
+    type: FlexibleNeRFModelSegClass
     # Number of layers in the model.
     num_layers: 4
     # Number of hidden units in each layer of the MLP (multi-layer

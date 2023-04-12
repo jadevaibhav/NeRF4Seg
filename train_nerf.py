@@ -283,7 +283,7 @@ def main():
         #     loss = coarse_loss
         loss = coarse_loss + (fine_loss if fine_loss is not None else 0.0)
         loss.backward()
-        psnr = mse2psnr(loss.item())
+        psnr = mse2psnr((loss-coarse_seg_loss-fine_seg_loss).item())
         optimizer.step()
         optimizer.zero_grad()
 
@@ -314,9 +314,11 @@ def main():
         writer.add_scalar("train/loss", loss.item(), i)
         writer.add_scalar("train/coarse_loss", coarse_loss.item(), i)
         writer.add_scalar("train/coarse_seg_loss", coarse_seg_loss.item(), i)
+        writer.add_scalar("train/coarse_mse_loss", (coarse_loss-coarse_seg_loss).item(), i)
         if rgb_fine is not None:
             writer.add_scalar("train/fine_loss", fine_loss.item(), i)
             writer.add_scalar("train/fine_seg_loss", fine_seg_loss.item(), i)
+            writer.add_scalar("train/fine_mse_loss", (fine_loss-fine_seg_loss).item(), i)
         writer.add_scalar("train/psnr", psnr, i)
         
 
@@ -384,7 +386,7 @@ def main():
                 writer.add_scalar("validation/loss", loss.item(), i)
                 writer.add_scalar("validation/coarse_loss", coarse_loss.item(), i)
                 writer.add_scalar("validataion/psnr", psnr, i)
-                writer.add_scalar("validation/coarse_seg_loss", coarse_seg_loss.item(), i)
+                #writer.add_scalar("validation/coarse_seg_loss", coarse_seg_loss.item(), i)
                 writer.add_image(
                     "validation/rgb_coarse", cast_to_image(rgb_coarse[..., :3]), i
                 )
@@ -393,7 +395,7 @@ def main():
                         "validation/rgb_fine", cast_to_image(rgb_fine[..., :3]), i
                     )
                     writer.add_scalar("validation/fine_loss", fine_loss.item(), i)
-                    writer.add_scalar("validation/fine_seg_loss", fine_seg_loss.item(), i)
+                    #writer.add_scalar("validation/fine_seg_loss", fine_seg_loss.item(), i)
                 writer.add_image(
                     "validation/img_target",
                     cast_to_image(target_ray_values[..., :3]),
