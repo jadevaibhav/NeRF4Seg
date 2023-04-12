@@ -360,7 +360,7 @@ def main():
                     ray_origins, ray_directions = get_ray_bundle(
                         H, W, focal, pose_target
                     )
-                    rgb_coarse, _, _, rgb_fine, _, _ = run_one_iter_of_nerf(
+                    rgb_coarse, _, _,seg_coarse, rgb_fine, _, _,seg_fine = run_one_iter_of_nerf(
                         H,
                         W,
                         focal,
