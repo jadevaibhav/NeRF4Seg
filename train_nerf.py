@@ -215,7 +215,8 @@ def main():
             #print("img_target",img_target.shape)
             #print("img_idx",img_idx)
             #shuffling masks using same index
-            t_masks = masks[img_idx].to(device)
+            if masks is not None:
+                t_masks = masks[img_idx].to(device)
             #print("masks random choice",masks.shape)
 
             pose_target = poses[img_idx, :3, :4].to(device)
@@ -233,15 +234,16 @@ def main():
             ray_origins = ray_origins[select_inds[:, 0], select_inds[:, 1], :]
             ray_directions = ray_directions[select_inds[:, 0], select_inds[:, 1], :]
             # batch_rays = torch.stack([ray_origins, ray_directions], dim=0)
-            target_s = img_target[select_inds[:, 0], select_inds[:, 1], :]
+            if masks is not None:
+                target_s = img_target[select_inds[:, 0], select_inds[:, 1], :]
             #print("img_target and target_s",img_target.shape,target_s.shape)
             # reshaping masks in same way as images
 
             #print("masks shape here",masks.shape)
-            if len(t_masks.shape) == 2:
-                t_masks = torch.nn.functional.one_hot(t_masks,num_classes=59)
+                if len(t_masks.shape) == 2:
+                    t_masks = torch.nn.functional.one_hot(t_masks,num_classes=59)
                 #print("masks shape",masks.shape)
-            target_masks = t_masks[select_inds[:, 0], select_inds[:, 1], :].to(torch.float32)
+                target_masks = t_masks[select_inds[:, 0], select_inds[:, 1], :].to(torch.float32)
             #print("masks shape and target:",masks.shape,target_masks.shape)
 
             then = time.time()
@@ -264,13 +266,17 @@ def main():
         #print("seg coarse and mask",seg_coarse.shape,target_masks.shape)
         #print("mask pred and target sample",seg_coarse[0],target_masks[0])
         #print("rgb coarse and fine",rgb_coarse.shape,rgb_fine.shape)
-        coarse_seg_loss = torch.nn.functional.cross_entropy(seg_coarse[..., :], target_masks[..., :])
+        coarse_seg_loss = 0.0
+        if masks is not None:
+            coarse_seg_loss = torch.nn.functional.cross_entropy(seg_coarse[..., :], target_masks[..., :])
         coarse_loss = 100*torch.nn.functional.mse_loss(
             rgb_coarse[..., :3], target_ray_values[..., :3]
         ) + coarse_seg_loss
         fine_loss = None
         if rgb_fine is not None:
-            fine_seg_loss = torch.nn.functional.cross_entropy(seg_fine[..., :], target_masks[..., :])
+            fine_seg_loss = 0.0
+            if masks is not None:
+                fine_seg_loss = torch.nn.functional.cross_entropy(seg_fine[..., :], target_masks[..., :])
             fine_loss = 100*torch.nn.functional.mse_loss(
                 rgb_fine[..., :3], target_ray_values[..., :3]
             ) + fine_seg_loss 
