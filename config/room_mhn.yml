@@ -65,7 +65,7 @@ models:
     include_input_dir: True
     # Number of encoding functions to use in the positional encoding
     # of the direction.
-    num_encoding_fn_dir: 4
+    num_encoding_fn_dir: 6
     log_sampling_xyz: True
     log_sampling_dir: True
   # Fine model.
@@ -92,7 +92,7 @@ models:
     include_input_dir: True
     # Number of encoding functions to use in the positional encoding of
     # the direction.
-    num_encoding_fn_dir: 4
+    num_encoding_fn_dir: 6
     log_sampling_xyz: True
     log_sampling_dir: True
 
