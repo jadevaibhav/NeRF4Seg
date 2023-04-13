@@ -140,7 +140,7 @@ def main():
         #num_encoding_fn_dir=cfg.models.coarse.num_encoding_fn_dir,
         #include_input_xyz=cfg.models.coarse.include_input_xyz,
         #include_input_dir=cfg.models.coarse.include_input_dir,
-        num_encoding_functions = cfg.models.coarse.num_encoding_functions,
+        num_encoding_functions = cfg.models.coarse.num_encoding_fn_xyz,
         use_viewdirs=cfg.models.coarse.use_viewdirs,
     )
     model_coarse.to(device)
@@ -152,7 +152,7 @@ def main():
             #num_encoding_fn_dir=cfg.models.fine.num_encoding_fn_dir,
             #include_input_xyz=cfg.models.fine.include_input_xyz,
             #include_input_dir=cfg.models.fine.include_input_dir,
-            num_encoding_functions = cfg.models.fine.num_encoding_functions,
+            num_encoding_functions = cfg.models.fine.num_encoding_fn_xyz,
             use_viewdirs=cfg.models.fine.use_viewdirs,
         )
         model_fine.to(device)
