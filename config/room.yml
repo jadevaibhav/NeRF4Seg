@@ -1,7 +1,7 @@
 # Parameters to setup experiment.
 experiment:
   # Unique experiment identifier
-  id: room-sep-sigma-without-softmax5
+  id: room-og-model
   # Experiment logs will be stored at "logdir"/"id"
   logdir: logs
   # Seed for random number generators (for repeatability).
@@ -36,7 +36,7 @@ dataset:
   # TODO: Add description
   llffhold: 8
   # send segmentation masks
-  is_seg: True
+  is_seg: False
   # Using color rendering for segmentation
   is_color: True
 # Model parameters.
@@ -44,7 +44,7 @@ models:
   # Coarse model.
   coarse:
     # Name of the torch.nn.Module class that implements the model.
-    type: FlexibleNeRFModelSegClass
+    type: PaperNeRFModel
     # Number of layers in the model.
     num_layers: 4
     # Number of hidden units in each layer of the MLP (multi-layer
@@ -71,7 +71,7 @@ models:
   # Fine model.
   fine:
     # Name of the torch.nn.Module class that implements the model.
-    type: FlexibleNeRFModelSegClass
+    type: PaperNeRFModel
     # Number of layers in the model.
     num_layers: 4
     # Number of hidden units in each layer of the MLP (multi-layer
