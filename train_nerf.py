@@ -260,7 +260,7 @@ def main():
             #print("masks shape here",masks.shape)
             if len(t_masks.shape) == 2:
 
-                t_masks = torch.nn.functional.one_hot(t_masks,num_classes=19)
+                t_masks = torch.nn.functional.one_hot(t_masks.to(torch.int64),num_classes=19)
             
             #focal_weights = t_masks.view(-1,59).sum(dim=0)/t_masks.sum() 
             #focal_weights += 10**(-5)*torch.ones(focal_weights.shape,device=device)
