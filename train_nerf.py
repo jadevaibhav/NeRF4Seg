@@ -232,7 +232,7 @@ def main():
             #shuffling masks using same index
             t_masks = masks[img_idx].to(device)
             y = t_masks.view(-1).detach().cpu().numpy() 
-            focal_weights = compute_class_weight('balanced',classes=np.arange(59),y=y)
+            focal_weights = compute_class_weight('balanced',classes=np.arange(19),y=y)
             #print("masks random choice",masks.shape)
 
             pose_target = poses[img_idx, :3, :4].to(device)
@@ -257,7 +257,7 @@ def main():
             #print("masks shape here",masks.shape)
             if len(t_masks.shape) == 2:
 
-                t_masks = torch.nn.functional.one_hot(t_masks,num_classes=59)
+                t_masks = torch.nn.functional.one_hot(t_masks,num_classes=19)
             
             #focal_weights = t_masks.view(-1,59).sum(dim=0)/t_masks.sum() 
             #focal_weights += 10**(-5)*torch.ones(focal_weights.shape,device=device)
