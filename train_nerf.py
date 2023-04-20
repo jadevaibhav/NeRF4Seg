@@ -256,7 +256,7 @@ def main():
                 t_masks = torch.nn.functional.one_hot(t_masks,num_classes=59)
             
             focal_weights = t_masks.view(-1,59).sum(dim=0)/t_masks.sum() 
-            focal_weights += 10**(-5)*torch.ones(focal_weights.shape)
+            focal_weights += 10**(-5)*torch.ones(focal_weights.shape,device=device)
             focal_weights = 1.0/focal_weights
             print(focal_weights)
             focal_loss = FocalLoss(weight=focal_weights)
