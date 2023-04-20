@@ -240,6 +240,9 @@ def main():
             #print("masks shape here",masks.shape)
             if len(t_masks.shape) == 2:
                 t_masks = torch.nn.functional.one_hot(t_masks,num_classes=59)
+            
+            focal_weights = t_masks.view(-1,59).sum(dim=0)/t_masks.sum()
+            print(focal_weights)
                 #print("masks shape",masks.shape)
             target_masks = t_masks[select_inds[:, 0], select_inds[:, 1], :].to(torch.float32)
             #print("masks shape and target:",masks.shape,target_masks.shape)

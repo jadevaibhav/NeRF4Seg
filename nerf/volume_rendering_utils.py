@@ -93,7 +93,7 @@ def volume_render_radiance_field_with_seg(
         # noise = noise.to(radiance_field)
         
     # seperate sigma and alpha value for each segmentation class
-    seg_map,weights = seg_3d_new(radiance_field,dists,noise,is_color=is_color)
+    seg_map,weights = seg_3d(radiance_field,dists,noise,is_color=is_color)
     if weights is None:
         return None,None,None,None,None,seg_map
     
