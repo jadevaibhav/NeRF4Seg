@@ -11,6 +11,7 @@ from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm, trange
 import torch.nn as nn
 import torch.nn.functional as F
+from sklearn.utils.class_weight import compute_class_weight
 
 from nerf import (CfgNode, get_embedding_function, get_ray_bundle, img2mse,
                   load_blender_data, load_llff_data, models,
@@ -230,6 +231,7 @@ def main():
             #print("img_idx",img_idx)
             #shuffling masks using same index
             t_masks = masks[img_idx].to(device)
+            focal_weights = compute_class_weight('balanced',np.unique(t_masks.view(-1)),t_masks.view(-1).numpy())
             #print("masks random choice",masks.shape)
 
             pose_target = poses[img_idx, :3, :4].to(device)
@@ -253,11 +255,12 @@ def main():
 
             #print("masks shape here",masks.shape)
             if len(t_masks.shape) == 2:
+
                 t_masks = torch.nn.functional.one_hot(t_masks,num_classes=59)
             
-            focal_weights = t_masks.view(-1,59).sum(dim=0)/t_masks.sum() 
-            focal_weights += 10**(-5)*torch.ones(focal_weights.shape,device=device)
-            focal_weights = 1.0/focal_weights
+            #focal_weights = t_masks.view(-1,59).sum(dim=0)/t_masks.sum() 
+            #focal_weights += 10**(-5)*torch.ones(focal_weights.shape,device=device)
+            #focal_weights = 1.0/focal_weights
             print(focal_weights)
             focal_loss = FocalLoss(weight=focal_weights)
                 #print("masks shape",masks.shape)
