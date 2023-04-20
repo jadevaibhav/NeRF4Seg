@@ -9,6 +9,8 @@ import torchvision
 import yaml
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm, trange
+import torch.nn as nn
+import torch.nn.functional as F
 
 from nerf import (CfgNode, get_embedding_function, get_ray_bundle, img2mse,
                   load_blender_data, load_llff_data, models,
