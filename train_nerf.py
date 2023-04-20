@@ -265,8 +265,8 @@ def main():
             #focal_weights = t_masks.view(-1,59).sum(dim=0)/t_masks.sum() 
             #focal_weights += 10**(-5)*torch.ones(focal_weights.shape,device=device)
             #focal_weights = 1.0/focal_weights
-            print(focal_weights)
-            focal_loss = FocalLoss(weight=torch.tensor(focal_weights))
+            #print(focal_weights)
+            focal_loss = FocalLoss(weight=torch.tensor(focal_weights,device=device))
                 #print("masks shape",masks.shape)
             target_masks = t_masks[select_inds[:, 0], select_inds[:, 1], :].to(torch.float32)
             #print("masks shape and target:",masks.shape,target_masks.shape)
