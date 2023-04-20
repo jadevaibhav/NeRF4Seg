@@ -236,7 +236,7 @@ def main():
             #shuffling masks using same index
             t_masks = masks[img_idx].to(device)
             
-            #print("masks random choice",masks.shape)
+            print("masks random choice",t_masks.shape)
 
             pose_target = poses[img_idx, :3, :4].to(device)
             ray_origins, ray_directions = get_ray_bundle(H, W, focal, pose_target)
