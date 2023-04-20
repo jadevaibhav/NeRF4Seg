@@ -14,7 +14,19 @@ from nerf import (CfgNode, get_embedding_function, get_ray_bundle, img2mse,
                   load_blender_data, load_llff_data, models,
                   mse2psnr, run_one_iter_of_nerf)
 
+class FocalLoss(nn.modules.loss._WeightedLoss):
+    def __init__(self, weight=None, gamma=2,reduction='mean'):
+        super(FocalLoss, self).__init__(weight,reduction=reduction)
+        self.gamma = gamma
+        self.weight = weight #weight parameter will act as the alpha parameter to balance class weights
 
+    def forward(self, input, target):
+
+        ce_loss = F.cross_entropy(input, target,reduction=self.reduction,weight=self.weight)
+        pt = torch.exp(-ce_loss)
+        focal_loss = ((1 - pt) ** self.gamma * ce_loss).mean()
+        return focal_loss
+    
 def main():
 
     parser = argparse.ArgumentParser()
@@ -241,8 +253,11 @@ def main():
             if len(t_masks.shape) == 2:
                 t_masks = torch.nn.functional.one_hot(t_masks,num_classes=59)
             
-            focal_weights = t_masks.view(-1,59).sum(dim=0)/t_masks.sum()
+            focal_weights = t_masks.view(-1,59).sum(dim=0)/t_masks.sum() 
+            focal_weights += 10**(-5)*torch.ones(focal_weights.shape)
+            focal_weights = 1.0/focal_weights
             print(focal_weights)
+            focal_loss = FocalLoss(weight=focal_weights)
                 #print("masks shape",masks.shape)
             target_masks = t_masks[select_inds[:, 0], select_inds[:, 1], :].to(torch.float32)
             #print("masks shape and target:",masks.shape,target_masks.shape)
@@ -267,13 +282,13 @@ def main():
         #print("seg coarse and mask",seg_coarse.shape,target_masks.shape)
         #print("mask pred and target sample",seg_coarse[0],target_masks[0])
         #print("rgb coarse and fine",rgb_coarse.shape,rgb_fine.shape)
-        coarse_seg_loss = torch.nn.functional.cross_entropy(seg_coarse[..., :], target_masks[..., :])
+        coarse_seg_loss = focal_loss(seg_coarse[..., :], target_masks[..., :])#torch.nn.functional.cross_entropy(seg_coarse[..., :], target_masks[..., :])
         coarse_loss = 100*torch.nn.functional.mse_loss(
             rgb_coarse[..., :3], target_ray_values[..., :3]
         ) + coarse_seg_loss
         fine_loss = None
         if rgb_fine is not None:
-            fine_seg_loss = torch.nn.functional.cross_entropy(seg_fine[..., :], target_masks[..., :])
+            fine_seg_loss = focal_loss(seg_fine[..., :], target_masks[..., :])#torch.nn.functional.cross_entropy(seg_fine[..., :], target_masks[..., :])
             fine_loss = 100*torch.nn.functional.mse_loss(
                 rgb_fine[..., :3], target_ray_values[..., :3]
             ) + fine_seg_loss 
