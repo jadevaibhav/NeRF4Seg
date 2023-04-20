@@ -104,7 +104,11 @@ def main():
             poses = torch.from_numpy(poses)
             
             if masks is not None:
+                y = masks.reshape(-1)
+                focal_weights = compute_class_weight('balanced',classes=np.arange(19),y=y)
                 masks = torch.from_numpy(masks)
+            
+                
                
     # Seed experiment for repeatability
     seed = cfg.experiment.randomseed
@@ -231,8 +235,7 @@ def main():
             #print("img_idx",img_idx)
             #shuffling masks using same index
             t_masks = masks[img_idx].to(device)
-            y = t_masks.view(-1).detach().cpu().numpy() 
-            focal_weights = compute_class_weight('balanced',classes=np.arange(19),y=y)
+            
             #print("masks random choice",masks.shape)
 
             pose_target = poses[img_idx, :3, :4].to(device)
