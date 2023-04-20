@@ -231,7 +231,8 @@ def main():
             #print("img_idx",img_idx)
             #shuffling masks using same index
             t_masks = masks[img_idx].to(device)
-            focal_weights = compute_class_weight('balanced',np.unique(t_masks.view(-1)),t_masks.view(-1).numpy())
+            y = t_masks.view(-1).detach().cpu().numpy() 
+            focal_weights = compute_class_weight('balanced',np.unique(y),y)
             #print("masks random choice",masks.shape)
 
             pose_target = poses[img_idx, :3, :4].to(device)
