@@ -421,7 +421,7 @@ def load_llff_data(
         render_poses = render_path_spiral(
             c2w_path, up, rads, focal, zdelta, zrate=0.5, rots=N_rots, N=N_views
         )
-        print("spiral path rendered poses")
+        print("spiral path rendered poses",render_poses[0],render_poses[1])
 
     render_poses = np.array(render_poses).astype(np.float32)
     print(render_poses.shape)
@@ -436,7 +436,71 @@ def load_llff_data(
     images = images.astype(np.float32)
     poses = poses.astype(np.float32)
     print('................................................................LOAD_LLFF_DATA WORKING....................................................................')
-
+    print('taking hwf from poses:',poses[0, :3, -1])
     
     return images, poses, bds, render_poses, i_test, masks
     
+
+def render_poses_llff(basedir,factor,bd_factor=0.75,path_zflat=False):
+    poses_arr = np.load(os.path.join(basedir, "poses_bounds.npy"))
+    poses = poses_arr[:, :-2].reshape([-1, 3, 5]).transpose([1, 2, 0])
+    bds = poses_arr[:, -2:].transpose([1, 0])
+
+    #hard-coded for room llff for now
+    sh = np.array([278,504,3])
+    poses[:2, 4, :] = np.array(sh[:2]).reshape([2, 1])
+    poses[2, 4, :] = poses[2, 4, :] * 1.0 / factor
+    print('POSES SHAPE: \n', poses.shape)
+
+    # Correct rotation matrix ordering and move variable dim to axis 0
+    poses = np.concatenate([poses[:, 1:2, :], -poses[:, 0:1, :], poses[:, 2:, :]], 1)
+    poses = np.moveaxis(poses, -1, 0).astype(np.float32)
+    bds = np.moveaxis(bds, -1, 0).astype(np.float32)
+
+    # Rescale if bd_factor is provided
+    sc = 1.0 if bd_factor is None else 1.0 / (bds.min() * bd_factor)
+    poses[:, :3, 3] *= sc
+    bds *= sc
+
+    # rendering poses around a sphere for eval
+    c2w = poses_avg(poses)
+    print("recentered", c2w.shape)
+    print(c2w[:3, :4])
+
+    # Get spiral
+    # Get average pose
+    up = normalize(poses[:, :3, 1].sum(0))
+
+    # Find a reasonable "focus depth" for this dataset
+    close_depth, inf_depth = bds.min() * 0.9, bds.max() * 5.0
+    dt = 0.75
+    mean_dz = 1.0 / (((1.0 - dt) / close_depth + dt / inf_depth))
+    focal = mean_dz
+
+    # Get radii for spiral path
+    shrink_factor = 0.8
+    zdelta = close_depth * 0.2
+    tt = poses[:, :3, 3]  # ptstocam(poses[:3,3,:].T, c2w).T
+    rads = np.percentile(np.abs(tt), 90, 0)
+    c2w_path = c2w
+    N_views = 120
+    N_rots = 2
+    if path_zflat:
+        #             zloc = np.percentile(tt, 10, 0)[2]
+        zloc = -close_depth * 0.1
+        c2w_path[:3, 3] = c2w_path[:3, 3] + zloc * c2w_path[:3, 2]
+        rads[2] = 0.0
+        N_rots = 1
+        N_views /= 2
+
+    # Generate poses for spiral path
+    render_poses = render_path_spiral(
+        c2w_path, up, rads, focal, zdelta, zrate=0.5, rots=N_rots, N=N_views
+    )
+    print("spiral path rendered poses")
+
+    render_poses = np.array(render_poses).astype(np.float32)
+    print(render_poses.shape)
+
+    return render_poses
+
