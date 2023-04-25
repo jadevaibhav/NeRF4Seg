@@ -502,5 +502,7 @@ def render_poses_llff(basedir,factor,bd_factor=0.75,path_zflat=False):
     render_poses = np.array(render_poses).astype(np.float32)
     print(render_poses.shape)
 
-    return render_poses
+    hwf = poses[0, :3, -1]
+
+    return render_poses,hwf
 

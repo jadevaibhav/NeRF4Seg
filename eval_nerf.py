@@ -13,10 +13,10 @@ from nerf import (
     CfgNode,
     get_ray_bundle,
     load_blender_data,
-    load_llff_data,
     models,
     get_embedding_function,
     run_one_iter_of_nerf,
+    render_poses_llff
 )
 
 
@@ -76,10 +76,13 @@ def main():
         H, W = int(H), int(W)
     elif cfg.dataset.type.lower() == "llff":
         # Load LLFF dataset
-        images, poses, bds, render_poses, i_test = load_llff_data(
-            cfg.dataset.basedir, factor=cfg.dataset.downsample_factor,
-        )
-        hwf = poses[0, :3, -1]
+        #images, poses, bds, render_poses, i_test = load_llff_data(
+        #    cfg.dataset.basedir, factor=cfg.dataset.downsample_factor,
+        #)
+        #hwf = poses[0, :3, -1]
+
+        #Using simple render function to load render_poses
+        render_poses,hwf = render_poses_llff(cfg.dataset.basedir, factor=cfg.dataset.downsample_factor)
         H, W, focal = hwf
         hwf = [int(H), int(W), focal]
         render_poses = torch.from_numpy(render_poses)
