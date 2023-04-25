@@ -165,7 +165,7 @@ def main():
         with torch.no_grad():
             pose = pose[:3, :4]
             ray_origins, ray_directions = get_ray_bundle(hwf[0], hwf[1], hwf[2], pose)
-            rgb_coarse, disp_coarse, _, rgb_fine, disp_fine, _ = run_one_iter_of_nerf(
+            rgb_coarse, disp_coarse, _,seg_coarse, rgb_fine, disp_fine, _,seg_fine = run_one_iter_of_nerf(
                 hwf[0],
                 hwf[1],
                 hwf[2],
