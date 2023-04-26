@@ -32,6 +32,7 @@ def cast_to_image(tensor, dataset_type):
 def cast_seg_map(seg,palette,img,opacity=0.5):
     
     seg = seg.detach().cpu()
+    print("sample pred",seg[0,0,:])
     color_seg = np.zeros((seg.shape[0], seg.shape[1], 3), dtype=np.uint8)
     print("seg shape",seg.shape,"color_seg shape", color_seg.shape)#,"palette is",palette)
     for label, color in enumerate(palette):
