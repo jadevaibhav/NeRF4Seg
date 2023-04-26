@@ -447,7 +447,7 @@ def render_poses_llff(basedir,factor,bd_factor=0.75,path_zflat=False):
     bds = poses_arr[:, -2:].transpose([1, 0])
 
     #hard-coded for room llff for now
-    sh = np.array([278,504,3])
+    sh = np.array([378,504,3])
     poses[:2, 4, :] = np.array(sh[:2]).reshape([2, 1])
     poses[2, 4, :] = poses[2, 4, :] * 1.0 / factor
     print('POSES SHAPE: \n', poses.shape)
@@ -503,6 +503,6 @@ def render_poses_llff(basedir,factor,bd_factor=0.75,path_zflat=False):
     print(render_poses.shape)
 
     hwf = poses[0, :3, -1]
-
+    print("hwf values:",hwf)
     return render_poses,hwf
 

@@ -29,14 +29,16 @@ def cast_to_image(tensor, dataset_type):
     # # Map back to shape (3, H, W), as tensorboard needs channels first.
     # return np.moveaxis(img, [-1], [0])
 
-def cast_seg_map(seg,palette,opacity=0.5):
-    seg = seg.permute(2, 0, 1).detach().cpu()
+def cast_seg_map(seg,palette,img,opacity=0.5):
+    
+    seg = seg.detach().cpu()
     color_seg = np.zeros((seg.shape[0], seg.shape[1], 3), dtype=np.uint8)
     print("seg shape",seg.shape,"color_seg shape", color_seg.shape,"palette is",palette)
     for label, color in enumerate(palette):
         color_seg[seg == label, :] = color
     # convert to BGR
-    color_seg = color_seg[..., ::-1].transpoe((-1,0,1))
+    # transpose as tensorboard require (3, H, W).
+    color_seg = color_seg[..., ::-1].transpose((-1,0,1))
 
     img = img * (1 - opacity) + color_seg * opacity
     img = img.astype(np.uint8)
@@ -200,20 +202,22 @@ def main():
             )
             rgb = rgb_fine if rgb_fine is not None else rgb_coarse
             seg = seg_fine if seg_fine is not None else seg_coarse
+            print("rgb shape",rgb.shape,"seg shape",seg.shape)
             if configargs.save_disparity_image:
                 disp = disp_fine if disp_fine is not None else disp_coarse
         times_per_image.append(time.time() - start)
         if configargs.savedir:
             savefile = os.path.join(configargs.savedir, f"{i:04d}.png")
+            img = cast_to_image(rgb[..., :3], cfg.dataset.type.lower())
             imageio.imwrite(
-                savefile, cast_to_image(rgb[..., :3], cfg.dataset.type.lower())
+                savefile, imageio
             )
 
             # saving the segmentation maps rendered on og images
             assert rgb.shape[:-1] == seg.shape[:-1]
             savefile = os.path.join(configargs.savedir, f"{i:04d}_seg.png")
             imageio.imwrite(
-                savefile, cast_seg_map(seg[..., :],palette)
+                savefile, cast_seg_map(seg[..., :],palette,img)
             )
             
             if configargs.save_disparity_image:
