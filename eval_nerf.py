@@ -19,6 +19,7 @@ from nerf import (
     render_poses_llff
 )
 
+#palette = [[180, 120, 120], [6, 230, 230], [80, 50, 50], [4, 200, 3], [120, 120, 80], [140, 140, 140], [204, 5, 255], [230, 230, 230], [4, 250, 7], [224, 5, 255], [235, 255, 7], [150, 5, 61], [120, 120, 70], [8, 255, 51], [255, 6, 82], [143, 255, 140], [204, 255, 4], [255, 51, 7], [204, 70, 3], [0, 102, 200], [61, 230, 250], [255, 6, 51], [11, 102, 255], [255, 7, 71], [255, 9, 224], [9, 7, 230], [220, 220, 220], [255, 9, 92], [112, 9, 255], [8, 255, 214], [7, 255, 224], [255, 184, 6], [10, 255, 71], [255, 41, 10], [7, 255, 255], [224, 255, 8], [102, 8, 255], [255, 61, 6], [255, 194, 7], [255, 122, 8], [0, 255, 20], [255, 8, 41], [255, 5, 153], [6, 51, 255], [235, 12, 255], [160, 150, 20], [0, 163, 255], [140, 140, 140], [250, 10, 15], [20, 255, 0], [31, 255, 0], [255, 31, 0], [255, 224, 0], [153, 255, 0], [0, 0, 255], [255, 71, 0], [0, 235, 255], [0, 173, 255], [31, 0, 255]]
 
 def cast_to_image(tensor, dataset_type):
     # Input tensor is (H, W, 3). Convert to (3, H, W).
@@ -34,7 +35,7 @@ def cast_seg_map(seg,palette,img,opacity=0.5):
     seg = seg.detach().cpu()
    
     color_seg = np.zeros((seg.shape[0], seg.shape[1], 3), dtype=np.uint8)
-    print("seg shape",seg.shape,"color_seg shape", color_seg.shape)#,"palette is",palette)
+    #print("seg shape",seg.shape,"color_seg shape", color_seg.shape)#,"palette is",palette)
     for label, color in enumerate(palette):
         #print("label",seg == label)
         color_seg[seg == label, :] = color
