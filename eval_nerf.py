@@ -29,6 +29,18 @@ def cast_to_image(tensor, dataset_type):
     # # Map back to shape (3, H, W), as tensorboard needs channels first.
     # return np.moveaxis(img, [-1], [0])
 
+def cast_seg_map(seg,palette,opacity=0.5):
+    seg = seg.permute(2, 0, 1).detach().cpu()
+    color_seg = np.zeros((seg.shape[0], seg.shape[1], 3), dtype=np.uint8)
+    for label, color in enumerate(palette):
+        color_seg[seg == label, :] = color
+    # convert to BGR
+    color_seg = color_seg[..., ::-1].transpoe((-1,0,1))
+
+    img = img * (1 - opacity) + color_seg * opacity
+    img = img.astype(np.uint8)
+
+    return img
 
 def cast_to_disparity_image(tensor):
     img = (tensor - tensor.min()) / (tensor.max() - tensor.min())
@@ -155,6 +167,13 @@ def main():
     os.makedirs(configargs.savedir, exist_ok=True)
     if configargs.save_disparity_image:
         os.makedirs(os.path.join(configargs.savedir, "disparity"), exist_ok=True)
+    
+    # creating color palette
+    state = np.random.get_state()
+    np.random.seed(42)
+    # random palette with hard coded num classes 19
+    palette = np.random.randint(0, 255, size=(19, 3))
+    np.random.set_state(state)
 
     # Evaluation loop
     times_per_image = []
@@ -179,6 +198,7 @@ def main():
                 encode_direction_fn=encode_direction_fn,
             )
             rgb = rgb_fine if rgb_fine is not None else rgb_coarse
+            seg = seg_fine if seg_fine is not None else seg_coarse
             if configargs.save_disparity_image:
                 disp = disp_fine if disp_fine is not None else disp_coarse
         times_per_image.append(time.time() - start)
@@ -187,6 +207,14 @@ def main():
             imageio.imwrite(
                 savefile, cast_to_image(rgb[..., :3], cfg.dataset.type.lower())
             )
+            
+            # saving the segmentation maps rendered on og images
+            assert rgb.shape[:-1] == seg.shape[:-1]
+            savefile = os.path.join(configargs.savedir, f"{i:04d}_seg.png")
+            imageio.imwrite(
+                savefile, cast_seg_map(seg[..., :])
+            )
+            
             if configargs.save_disparity_image:
                 savefile = os.path.join(configargs.savedir, "disparity", f"{i:04d}.png")
                 imageio.imwrite(savefile, cast_to_disparity_image(disp))
