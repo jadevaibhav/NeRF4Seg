@@ -89,7 +89,7 @@ def main():
             half_res=cfg.dataset.half_res,
             testskip=cfg.dataset.testskip,
         )
-        i_train, i_val, i_test = i_split
+        #i_train, i_val, i_test = i_split
         H, W, focal = hwf
         H, W = int(H), int(W)
     elif cfg.dataset.type.lower() == "llff":
@@ -100,7 +100,7 @@ def main():
         #hwf = poses[0, :3, -1]
 
         #Using simple render function to load render_poses
-        render_poses,hwf = render_poses_llff(cfg.dataset.basedir, factor=cfg.dataset.downsample_factor)
+        render_poses,hwf,poses = render_poses_llff(cfg.dataset.basedir, factor=cfg.dataset.downsample_factor)
         H, W, focal = hwf
         hwf = [int(H), int(W), focal]
         render_poses = torch.from_numpy(render_poses)

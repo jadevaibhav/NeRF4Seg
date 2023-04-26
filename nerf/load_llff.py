@@ -504,5 +504,5 @@ def render_poses_llff(basedir,factor,bd_factor=0.75,path_zflat=False):
 
     hwf = poses[0, :3, -1]
     print("hwf values:",hwf)
-    return render_poses,hwf
+    return render_poses,hwf,poses
 
