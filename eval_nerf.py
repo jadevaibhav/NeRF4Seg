@@ -36,7 +36,7 @@ def cast_seg_map(seg,palette,img,opacity=0.5):
     color_seg = np.zeros((seg.shape[0], seg.shape[1], 3), dtype=np.uint8)
     print("seg shape",seg.shape,"color_seg shape", color_seg.shape)#,"palette is",palette)
     for label, color in enumerate(palette):
-        print("label",seg == label)
+        #print("label",seg == label)
         color_seg[seg == label, :] = color
     # convert to BGR
     # transpose not required, no need to convert to (3, H, W).
