@@ -43,7 +43,7 @@ def cast_seg_map(seg,palette,img,opacity=0.5):
     color_seg = color_seg[..., ::-1]#.transpose((-1,0,1))
 
     img = img * (1 - opacity) + color_seg * opacity
-    #img = img.astype(np.uint8)
+    img = img.astype(np.uint8)
     img = np.array(torchvision.transforms.ToPILImage()(img))
     return img
 
