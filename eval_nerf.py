@@ -41,8 +41,8 @@ def cast_seg_map(seg,palette,img,opacity=0.5):
     color_seg = color_seg[..., ::-1].transpose((-1,0,1))
 
     img = img * (1 - opacity) + color_seg * opacity
-    img = img.astype(np.uint8)
-
+    #img = img.astype(np.uint8)
+    img = np.array(torchvision.transforms.ToPILImage()(img))
     return img
 
 def cast_to_disparity_image(tensor):
@@ -210,7 +210,7 @@ def main():
             savefile = os.path.join(configargs.savedir, f"{i:04d}.png")
             img = cast_to_image(rgb[..., :3], cfg.dataset.type.lower())
             imageio.imwrite(
-                savefile, imageio
+                savefile, img
             )
 
             # saving the segmentation maps rendered on og images
