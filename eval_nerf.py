@@ -39,8 +39,8 @@ def cast_seg_map(seg,palette,img,opacity=0.5):
         print("label",seg == label)
         color_seg[seg == label, :] = color
     # convert to BGR
-    # transpose as tensorboard require (3, H, W).
-    color_seg = color_seg[..., ::-1].transpose((-1,0,1))
+    # transpose not required, no need to convert to (3, H, W).
+    color_seg = color_seg[..., ::-1]#.transpose((-1,0,1))
 
     img = img * (1 - opacity) + color_seg * opacity
     #img = img.astype(np.uint8)
