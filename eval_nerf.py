@@ -207,12 +207,12 @@ def main():
             imageio.imwrite(
                 savefile, cast_to_image(rgb[..., :3], cfg.dataset.type.lower())
             )
-            
+
             # saving the segmentation maps rendered on og images
             assert rgb.shape[:-1] == seg.shape[:-1]
             savefile = os.path.join(configargs.savedir, f"{i:04d}_seg.png")
             imageio.imwrite(
-                savefile, cast_seg_map(seg[..., :])
+                savefile, cast_seg_map(seg[..., :],palette)
             )
             
             if configargs.save_disparity_image:
