@@ -95,7 +95,7 @@ def main():
         H, W = int(H), int(W)
     elif cfg.dataset.type.lower() == "llff":
         # Load LLFF dataset
-        _, poses, bds, render_poses, _ = load_llff_data(
+        _, poses, bds, render_poses, _, _ = load_llff_data(
             cfg.dataset.basedir, factor=cfg.dataset.downsample_factor,
         )
         hwf = poses[0, :3, -1]
