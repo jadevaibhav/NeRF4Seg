@@ -222,7 +222,7 @@ def main():
             seg = seg.argmax(dim=-1)
             savefile = os.path.join(configargs.savedir, f"{i:04d}_seg.png")
             imageio.imwrite(
-                savefile, cast_seg_map(seg[..., :],palette,img)
+                savefile, cast_seg_map(seg[..., :],palette19,img)
             )
             
             if configargs.save_disparity_image:
