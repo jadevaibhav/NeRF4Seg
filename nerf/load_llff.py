@@ -441,7 +441,7 @@ def load_llff_data(
     return images, poses, bds, render_poses, i_test, masks
     
 
-def render_poses_llff(basedir,factor,bd_factor=0.75,path_zflat=False):
+def render_poses_llff(basedir,factor,bd_factor=0.75,recenter=True,path_zflat=False):
     poses_arr = np.load(os.path.join(basedir, "poses_bounds.npy"))
     poses = poses_arr[:, :-2].reshape([-1, 3, 5]).transpose([1, 2, 0])
     bds = poses_arr[:, -2:].transpose([1, 0])
@@ -462,6 +462,9 @@ def render_poses_llff(basedir,factor,bd_factor=0.75,path_zflat=False):
     poses[:, :3, 3] *= sc
     bds *= sc
 
+    if recenter:
+        poses = recenter_poses(poses)
+        
     # rendering poses around a sphere for eval
     c2w = poses_avg(poses)
     print("recentered", c2w.shape)
