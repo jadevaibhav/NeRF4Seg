@@ -136,6 +136,7 @@ def main():
         )
 
     # Initialize a coarse-resolution model.
+    '''
     model_coarse = getattr(models, cfg.models.coarse.type)(
         num_encoding_fn_xyz=cfg.models.coarse.num_encoding_fn_xyz,
         num_encoding_fn_dir=cfg.models.coarse.num_encoding_fn_dir,
@@ -152,6 +153,28 @@ def main():
             num_encoding_fn_dir=cfg.models.fine.num_encoding_fn_dir,
             include_input_xyz=cfg.models.fine.include_input_xyz,
             include_input_dir=cfg.models.fine.include_input_dir,
+            use_viewdirs=cfg.models.fine.use_viewdirs,
+        )
+        model_fine.to(device)
+    '''
+    model_coarse = getattr(models, cfg.models.coarse.type)(
+        #num_encoding_fn_xyz=cfg.models.coarse.num_encoding_fn_xyz,
+        #num_encoding_fn_dir=cfg.models.coarse.num_encoding_fn_dir,
+        #include_input_xyz=cfg.models.coarse.include_input_xyz,
+        #include_input_dir=cfg.models.coarse.include_input_dir,
+        num_encoding_functions = cfg.models.coarse.num_encoding_fn_xyz,
+        use_viewdirs=cfg.models.coarse.use_viewdirs,
+    )
+    model_coarse.to(device)
+    # If a fine-resolution model is specified, initialize it.
+    model_fine = None
+    if hasattr(cfg.models, "fine"):
+        model_fine = getattr(models, cfg.models.fine.type)(
+            #num_encoding_fn_xyz=cfg.models.fine.num_encoding_fn_xyz,
+            #num_encoding_fn_dir=cfg.models.fine.num_encoding_fn_dir,
+            #include_input_xyz=cfg.models.fine.include_input_xyz,
+            #include_input_dir=cfg.models.fine.include_input_dir,
+            num_encoding_functions = cfg.models.fine.num_encoding_fn_xyz,
             use_viewdirs=cfg.models.fine.use_viewdirs,
         )
         model_fine.to(device)
@@ -241,8 +264,11 @@ def main():
             pose_target = poses[img_idx, :3, :4].to(device)
             ray_origins, ray_directions = get_ray_bundle(H, W, focal, pose_target)
             coords = torch.stack(
-                torch.meshgrid(torch.arange(H).to(device), torch.arange(W).to(device), indexing='xy'),
-                dim=-1, 
+                torch.meshgrid(
+                    torch.arange(H).to(device), torch.arange(W).to(device),
+                    indexing = 'xy'
+                    ),
+                dim=-1,
             )
             coords = coords.reshape((-1, 2))
             select_inds = np.random.choice(
