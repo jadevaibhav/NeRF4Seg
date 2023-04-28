@@ -9,12 +9,27 @@ import torchvision
 import yaml
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm, trange
+import torch.nn as nn
+import torch.nn.functional as F
+from sklearn.utils.class_weight import compute_class_weight
 
 from nerf import (CfgNode, get_embedding_function, get_ray_bundle, img2mse,
-                  load_blender_data, load_llff_data,  models,
+                  load_blender_data, load_llff_data, models,
                   mse2psnr, run_one_iter_of_nerf)
 
+class FocalLoss(nn.modules.loss._WeightedLoss):
+    def __init__(self, weight=None, gamma=2,reduction='mean'):
+        super(FocalLoss, self).__init__(weight,reduction=reduction)
+        self.gamma = gamma
+        self.weight = weight #weight parameter will act as the alpha parameter to balance class weights
 
+    def forward(self, input, target):
+
+        ce_loss = F.cross_entropy(input, target,reduction=self.reduction,weight=self.weight)
+        pt = torch.exp(-ce_loss)
+        focal_loss = ((1 - pt) ** self.gamma * ce_loss).mean()
+        return focal_loss
+    
 def main():
 
     parser = argparse.ArgumentParser()
@@ -65,8 +80,8 @@ def main():
             if cfg.nerf.train.white_background:
                 images = images[..., :3] * images[..., -1:] + (1.0 - images[..., -1:])
         elif cfg.dataset.type.lower() == "llff":
-            images, poses, bds, render_poses, i_test = load_llff_data(
-                cfg.dataset.basedir, factor=cfg.dataset.downsample_factor
+            images, poses, bds, render_poses, i_test, masks = load_llff_data(
+                cfg.dataset.basedir, factor=cfg.dataset.downsample_factor, is_seg=cfg.dataset.is_seg
             )
             hwf = poses[0, :3, -1]
             poses = poses[:, :3, :4]
@@ -87,7 +102,14 @@ def main():
             hwf = [H, W, focal]
             images = torch.from_numpy(images)
             poses = torch.from_numpy(poses)
-
+            
+            if masks is not None:
+                y = masks.reshape(-1)
+                focal_weights = compute_class_weight('balanced',classes=np.arange(19),y=y)
+                masks = torch.from_numpy(masks)
+            
+                
+               
     # Seed experiment for repeatability
     seed = cfg.experiment.randomseed
     np.random.seed(seed)
@@ -216,7 +238,7 @@ def main():
             target_ray_values = target_ray_values[select_inds].to(device)
             # ray_bundle = torch.stack([ray_origins, ray_directions], dim=0).to(device)
 
-            rgb_coarse, _, _, rgb_fine, _, _ = run_one_iter_of_nerf(
+            rgb_coarse, _, _, rgb_fine, _, _,seg_coarse,seg_fine = run_one_iter_of_nerf(
                 cache_dict["height"],
                 cache_dict["width"],
                 cache_dict["focal_length"],
@@ -232,6 +254,13 @@ def main():
         else:
             img_idx = np.random.choice(i_train)
             img_target = images[img_idx].to(device)
+            #print("img_target",img_target.shape)
+            #print("img_idx",img_idx)
+            #shuffling masks using same index
+            t_masks = masks[img_idx].to(device)
+            
+            #print("masks random choice",t_masks.shape)
+
             pose_target = poses[img_idx, :3, :4].to(device)
             ray_origins, ray_directions = get_ray_bundle(H, W, focal, pose_target)
             coords = torch.stack(
@@ -245,14 +274,31 @@ def main():
             select_inds = np.random.choice(
                 coords.shape[0], size=(cfg.nerf.train.num_random_rays), replace=False
             )
+            #print("select inds",select_inds)
             select_inds = coords[select_inds]
             ray_origins = ray_origins[select_inds[:, 0], select_inds[:, 1], :]
             ray_directions = ray_directions[select_inds[:, 0], select_inds[:, 1], :]
             # batch_rays = torch.stack([ray_origins, ray_directions], dim=0)
             target_s = img_target[select_inds[:, 0], select_inds[:, 1], :]
+            #print("img_target and target_s",img_target.shape,target_s.shape)
+            # reshaping masks in same way as images
+
+            #print("masks shape here",masks.shape)
+            if len(t_masks.shape) == 2:
+
+                t_masks = torch.nn.functional.one_hot(t_masks.to(torch.int64),num_classes=19)
+            
+            #focal_weights = t_masks.view(-1,59).sum(dim=0)/t_masks.sum() 
+            #focal_weights += 10**(-5)*torch.ones(focal_weights.shape,device=device)
+            #focal_weights = 1.0/focal_weights
+            #print(focal_weights)
+            focal_loss = FocalLoss(weight=torch.tensor(focal_weights,device=device))
+                #print("masks shape",masks.shape)
+            target_masks = t_masks[select_inds[:, 0], select_inds[:, 1], :].to(torch.float32)
+            #print("masks shape and target:",masks.shape,target_masks.shape)
 
             then = time.time()
-            rgb_coarse, _, _, rgb_fine, _, _ = run_one_iter_of_nerf(
+            rgb_coarse, _, _,seg_coarse, rgb_fine, _, _,seg_fine = run_one_iter_of_nerf(
                 H,
                 W,
                 focal,
@@ -267,14 +313,21 @@ def main():
             )
             target_ray_values = target_s
 
-        coarse_loss = torch.nn.functional.mse_loss(
+        #TODO: Have to input target seg maps and modify 
+        #print("seg coarse and mask",seg_coarse.shape,target_masks.shape)
+        #print("mask pred and target sample",seg_coarse[0],target_masks[0])
+        #print("rgb coarse and fine",rgb_coarse.shape,rgb_fine.shape)
+        coarse_seg_loss = focal_loss(seg_coarse[..., :], target_masks[..., :])#torch.nn.functional.cross_entropy(seg_coarse[..., :], target_masks[..., :])
+        coarse_loss = 100*torch.nn.functional.mse_loss(
             rgb_coarse[..., :3], target_ray_values[..., :3]
-        )
+        ) + coarse_seg_loss
         fine_loss = None
         if rgb_fine is not None:
-            fine_loss = torch.nn.functional.mse_loss(
+            fine_seg_loss = focal_loss(seg_fine[..., :], target_masks[..., :])#torch.nn.functional.cross_entropy(seg_fine[..., :], target_masks[..., :])
+            fine_loss = 100*torch.nn.functional.mse_loss(
                 rgb_fine[..., :3], target_ray_values[..., :3]
-            )
+            ) + fine_seg_loss 
+        
         # loss = torch.nn.functional.mse_loss(rgb_pred[..., :3], target_s[..., :3])
         loss = 0.0
         # if fine_loss is not None:
@@ -283,7 +336,7 @@ def main():
         #     loss = coarse_loss
         loss = coarse_loss + (fine_loss if fine_loss is not None else 0.0)
         loss.backward()
-        psnr = mse2psnr(loss.item())
+        psnr = mse2psnr((loss-coarse_seg_loss-fine_seg_loss).item())
         optimizer.step()
         optimizer.zero_grad()
 
@@ -303,12 +356,24 @@ def main():
                 + str(loss.item())
                 + " PSNR: "
                 + str(psnr)
+                + " segmentation loss: "
+                + str((coarse_seg_loss+fine_seg_loss).item())
+                + " MSE loss: "
+                + str((loss - (coarse_seg_loss+fine_seg_loss)).item())
+                + " sample pred: "
+                + str(seg_coarse[0].tolist())
+
             )
         writer.add_scalar("train/loss", loss.item(), i)
         writer.add_scalar("train/coarse_loss", coarse_loss.item(), i)
+        writer.add_scalar("train/coarse_seg_loss", coarse_seg_loss.item(), i)
+        writer.add_scalar("train/coarse_mse_loss", (coarse_loss-coarse_seg_loss).item(), i)
         if rgb_fine is not None:
             writer.add_scalar("train/fine_loss", fine_loss.item(), i)
+            writer.add_scalar("train/fine_seg_loss", fine_seg_loss.item(), i)
+            writer.add_scalar("train/fine_mse_loss", (fine_loss-fine_seg_loss).item(), i)
         writer.add_scalar("train/psnr", psnr, i)
+        
 
         # Validation
         if (
@@ -322,12 +387,12 @@ def main():
 
             start = time.time()
             with torch.no_grad():
-                rgb_coarse, rgb_fine = None, None
+                rgb_coarse, rgb_fine,seg_coarse,seg_fine = None, None, None, None
                 target_ray_values = None
                 if USE_CACHED_DATASET:
                     datafile = np.random.choice(validation_paths)
                     cache_dict = torch.load(datafile)
-                    rgb_coarse, _, _, rgb_fine, _, _ = run_one_iter_of_nerf(
+                    rgb_coarse, _, _,seg_coarse, rgb_fine, _, _,seg_fine = run_one_iter_of_nerf(
                         cache_dict["height"],
                         cache_dict["width"],
                         cache_dict["focal_length"],
@@ -348,7 +413,7 @@ def main():
                     ray_origins, ray_directions = get_ray_bundle(
                         H, W, focal, pose_target
                     )
-                    rgb_coarse, _, _, rgb_fine, _, _ = run_one_iter_of_nerf(
+                    rgb_coarse, _, _,seg_coarse, rgb_fine, _, _,seg_fine = run_one_iter_of_nerf(
                         H,
                         W,
                         focal,
@@ -362,10 +427,10 @@ def main():
                         encode_direction_fn=encode_direction_fn,
                     )
                     target_ray_values = img_target
-                coarse_loss = img2mse(rgb_coarse[..., :3], target_ray_values[..., :3])
+                coarse_loss = img2mse(rgb_coarse[..., :3], target_ray_values[..., :3]) #+ torch.nn.functional.cross_entropy(seg_coarse[...,:],target_mask[...,:])
                 loss, fine_loss = 0.0, 0.0
                 if rgb_fine is not None:
-                    fine_loss = img2mse(rgb_fine[..., :3], target_ray_values[..., :3])
+                    fine_loss = img2mse(rgb_fine[..., :3], target_ray_values[..., :3]) #+ torch.nn.functional.cross_entropy(seg_fine[...,:],target_mask[...,:])
                     loss = fine_loss
                 else:
                     loss = coarse_loss
@@ -374,6 +439,7 @@ def main():
                 writer.add_scalar("validation/loss", loss.item(), i)
                 writer.add_scalar("validation/coarse_loss", coarse_loss.item(), i)
                 writer.add_scalar("validataion/psnr", psnr, i)
+                #writer.add_scalar("validation/coarse_seg_loss", coarse_seg_loss.item(), i)
                 writer.add_image(
                     "validation/rgb_coarse", cast_to_image(rgb_coarse[..., :3]), i
                 )
@@ -382,6 +448,7 @@ def main():
                         "validation/rgb_fine", cast_to_image(rgb_fine[..., :3]), i
                     )
                     writer.add_scalar("validation/fine_loss", fine_loss.item(), i)
+                    #writer.add_scalar("validation/fine_seg_loss", fine_seg_loss.item(), i)
                 writer.add_image(
                     "validation/img_target",
                     cast_to_image(target_ray_values[..., :3]),

@@ -25,26 +25,28 @@ def get_minibatches(inputs: torch.Tensor, chunksize: Optional[int] = 1024 * 8):
     return [inputs[i : i + chunksize] for i in range(0, inputs.shape[0], chunksize)]
 
 
-def cumprod_exclusive(tensor: torch.Tensor) -> torch.Tensor:
+def cumprod_exclusive(tensor: torch.Tensor,dim=-1) -> torch.Tensor:
     r"""Mimick functionality of tf.math.cumprod(..., exclusive=True), as it isn't available in PyTorch.
 
     Args:
     tensor (torch.Tensor): Tensor whose cumprod (cumulative product, see `torch.cumprod`) along dim=-1
       is to be computed.
-
+    dim (int): dimension along which cumprod is calculated
     Returns:
     cumprod (torch.Tensor): cumprod of Tensor along dim=-1, mimiciking the functionality of
       tf.math.cumprod(..., exclusive=True) (see `tf.math.cumprod` for details).
     """
     # TESTED
-    # Only works for the last dimension (dim=-1)
-    dim = -1
+    # Works for any dimension dim
+      
     # Compute regular cumprod first (this is equivalent to `tf.math.cumprod(..., exclusive=False)`).
     cumprod = torch.cumprod(tensor, dim)
     # "Roll" the elements along dimension 'dim' by 1 element.
     cumprod = torch.roll(cumprod, 1, dim)
-    # Replace the first element by "1" as this is what tf.cumprod(..., exclusive=True) does.
-    cumprod[..., 0] = 1.0
+    # Replace the first element by "1" in dim as this is what tf.cumprod(..., exclusive=True) does.
+    cumprod = cumprod.transpose(dim,-1)
+    cumprod[...,0] = 1.0
+    cumprod = cumprod.transpose(dim,-1)
 
     return cumprod
 

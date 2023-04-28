@@ -2,6 +2,7 @@ import os
 
 import imageio
 import numpy as np
+import skimage.transform as skt
 
 # Implementation from:
 # https://github.com/yenchenlin/nerf-pytorch/blob/master/load_llff.py
@@ -9,16 +10,23 @@ import numpy as np
 #  see https://github.com/Fyusion/LLFF for original
 
 
+
 def _minify(basedir, factors=[], resolutions=[]):
+    # downsamples images based on a user provided factor in config.yml file for object
     needtoload = False
     for r in factors:
+        # r = 8
+        print('VALUE of factors: \n', r)
         imgdir = os.path.join(basedir, "images_{}".format(r))
         if not os.path.exists(imgdir):
             needtoload = True
+
     for r in resolutions:
+        print('VALUE of resolutions: \n', r)
         imgdir = os.path.join(basedir, "images_{}x{}".format(r[1], r[0]))
         if not os.path.exists(imgdir):
             needtoload = True
+
     if not needtoload:
         return
 
@@ -27,14 +35,17 @@ def _minify(basedir, factors=[], resolutions=[]):
     imgdir = os.path.join(basedir, "images")
     imgs = [os.path.join(imgdir, f) for f in sorted(os.listdir(imgdir))]
     imgs = [
-        f
-        for f in imgs
-        if any([f.endswith(ex) for ex in ["JPG", "jpg", "png", "jpeg", "PNG"]])
-    ]
+    f
+    for f in imgs
+    if any([f.endswith(ex) for ex in ["JPG", "jpg", "png", "jpeg", "PNG"]])
+]
     imgdir_orig = imgdir
 
-    wd = os.getcwd()
+    print('IMAGES LINE 38: \n', np.asarray(imgs))
 
+    wd = os.getcwd()
+    print('CWD LINE 56: \n', wd)
+    
     for r in factors + resolutions:
         if isinstance(r, int):
             name = "images_{}".format(r)
@@ -49,7 +60,7 @@ def _minify(basedir, factors=[], resolutions=[]):
         print("Minifying", r, basedir)
 
         os.makedirs(imgdir)
-        check_output("cp {}/* {}".format(imgdir_orig, imgdir), shell=True)
+        check_output("copy {}\* {}".format(imgdir_orig, imgdir), shell=True)
 
         ext = imgs[0].split(".")[-1]
         args = " ".join(
@@ -61,16 +72,23 @@ def _minify(basedir, factors=[], resolutions=[]):
         os.chdir(wd)
 
         if ext != "png":
-            check_output("rm {}/*.{}".format(imgdir, ext), shell=True)
+            check_output("del {}\*.{}".format(imgdir, ext), shell=True)
             print("Removed duplicates")
         print("Done")
 
 
-def _load_data(basedir, factor=None, width=None, height=None, load_imgs=True):
 
+
+
+
+
+# Original image shape for testing changes: (4032, 3024, 3)
+def _load_data(basedir, factor=None, width=None, height=None, load_imgs=True):
+     
     poses_arr = np.load(os.path.join(basedir, "poses_bounds.npy"))
     poses = poses_arr[:, :-2].reshape([-1, 3, 5]).transpose([1, 2, 0])
     bds = poses_arr[:, -2:].transpose([1, 0])
+    #print("poses and bds",poses.shape,bds.shape)
 
     img0 = [
         os.path.join(basedir, "images", f)
@@ -78,6 +96,9 @@ def _load_data(basedir, factor=None, width=None, height=None, load_imgs=True):
         if f.endswith("JPG") or f.endswith("jpg") or f.endswith("png")
     ][0]
     sh = imageio.imread(img0).shape
+    
+    # (3024, 4032, 3) -> downscaled to (378, 504, 3)
+    print('IMAGE SHAPE LINE 82: \n', sh) 
 
     sfx = ""
 
@@ -98,6 +119,7 @@ def _load_data(basedir, factor=None, width=None, height=None, load_imgs=True):
     else:
         factor = 1
 
+    # create and set folder path according to downscale factor
     imgdir = os.path.join(basedir, "images" + sfx)
     if not os.path.exists(imgdir):
         print(imgdir, "does not exist, returning")
@@ -115,11 +137,17 @@ def _load_data(basedir, factor=None, width=None, height=None, load_imgs=True):
             )
         )
         return
+    
+    # 41
+    
 
     sh = imageio.imread(imgfiles[0]).shape
+
+    print('IMAGE FILES FINAL SHAPE: \n', sh)
+
     poses[:2, 4, :] = np.array(sh[:2]).reshape([2, 1])
     poses[2, 4, :] = poses[2, 4, :] * 1.0 / factor
-
+    print('POSES SHAPE: \n', poses.shape)
     if not load_imgs:
         return poses, bds
 
@@ -133,6 +161,8 @@ def _load_data(basedir, factor=None, width=None, height=None, load_imgs=True):
     imgs = np.stack(imgs, -1)
 
     print("Loaded image data", imgs.shape, poses[:, -1, 0])
+    print('IMAGE SHAPE: \n', imgs.shape)
+    print('................................................................_LOAD_DATA WORKING....................................................................')
     return poses, bds, imgs
 
 
@@ -275,14 +305,68 @@ def spherify_poses(poses, bds):
     return poses_reset, new_poses, bds
 
 
+def _load_seg_masks(basedir, factor=None, width=None, height=None):
+
+    if factor!=None:
+        scale_type = factor
+        if os.path.exists(os.path.join(basedir, f'masks_{scale_type}')):
+            scaled_masks = np.load(os.path.join(os.path.join(basedir, f'masks_{scale_type}'), f'masks_{scale_type}.npy'))
+        else:
+            mask_dir = os.path.join(basedir, 'segmentation_masks')
+            mask_names = [m for m in sorted(os.listdir(mask_dir)) if m.endswith("npy")]
+
+            masks = [os.path.join(mask_dir, i) for i in mask_names]
+            mask_values = [np.load(i) for i in masks]
+
+            scaled_masks = []
+
+            if factor!=None:
+                scale_type = factor
+                if not os.path.exists(os.path.join(basedir, f'masks_{scale_type}')):
+                    os.mkdir(os.path.join(basedir, f'masks_{scale_type}'))
+                    for mask in mask_values:
+                        mask_rescaled = skt.resize(mask, (mask.shape[0]/factor, mask.shape[1]/factor, mask.shape[-1]), anti_aliasing=False)
+                        scaled_masks.append(mask_rescaled)
+                        np.save(os.path.join(os.path.join(basedir, f"masks_{scale_type}"), f"masks_{scale_type}.npy"), scaled_masks)
+                else: 
+                    scaled_masks = np.load(os.path.join(os.path.join(basedir, f'masks_{scale_type}'), f'masks_{scale_type}.npy'))
+                        
+            elif height!=None and width!=None:
+                scale_type = f"{width}_{height}"
+                if not os.path.exists(os.path.join(basedir, f'masks_{scale_type}')):
+                    os.mkdir(os.path.join(basedir, f'masks_{scale_type}'))
+                    for mask in mask_values:
+                        mask_rescaled = skt.resize(mask, (width, height, mask.shape[-1]), anti_aliasing=False)
+                        scaled_masks.append(mask_rescaled)
+                        np.save(os.path.join(os.path.join(basedir, f"masks_{scale_type}"), f"masks_{scale_type}.npy"), scaled_masks)
+                else: 
+                    scaled_masks = np.load(os.path.join(os.path.join(basedir, f'masks_{scale_type}'), f'masks_{scale_type}.npy'))      
+            else:  
+                scale_type = None    
+                scaled_masks = mask_values
+
+    
+    scaled_masks = np.asarray(scaled_masks)#.transpose((0,2,1))
+    #print(scaled_masks.shape)
+    return scaled_masks
+
 def load_llff_data(
-    basedir, factor=8, recenter=True, bd_factor=0.75, spherify=False, path_zflat=False
+    basedir, factor=8, recenter=True, bd_factor=0.75, spherify=False, path_zflat=False, is_seg=False
 ):
 
     poses, bds, imgs = _load_data(
         basedir, factor=factor
     )  # factor=8 downsamples original imgs by 8x
     print("Loaded", basedir, bds.min(), bds.max())
+
+    #pass none if is_seg=False
+    masks = None
+    if is_seg:
+    #returns np array of mask arrays
+        masks = _load_seg_masks(
+            basedir, factor=factor
+        )
+        print("MASKS LOADED: \n", masks.shape)
 
     # Correct rotation matrix ordering and move variable dim to axis 0
     poses = np.concatenate([poses[:, 1:2, :], -poses[:, 0:1, :], poses[:, 2:, :]], 1)
@@ -337,9 +421,10 @@ def load_llff_data(
         render_poses = render_path_spiral(
             c2w_path, up, rads, focal, zdelta, zrate=0.5, rots=N_rots, N=N_views
         )
+        print("spiral path rendered poses",render_poses[0],render_poses[1])
 
     render_poses = np.array(render_poses).astype(np.float32)
-
+    print(render_poses.shape)
     c2w = poses_avg(poses)
     print("Data:")
     print(poses.shape, images.shape, bds.shape)
@@ -350,5 +435,77 @@ def load_llff_data(
 
     images = images.astype(np.float32)
     poses = poses.astype(np.float32)
+    print('................................................................LOAD_LLFF_DATA WORKING....................................................................')
+    print('taking hwf from poses:',poses[0, :3, -1])
+    
+    return images, poses, bds, render_poses, i_test, masks
+    
 
-    return images, poses, bds, render_poses, i_test
+def render_poses_llff(basedir,factor,bd_factor=0.75,recenter=True,path_zflat=False):
+    poses_arr = np.load(os.path.join(basedir, "poses_bounds.npy"))
+    poses = poses_arr[:, :-2].reshape([-1, 3, 5]).transpose([1, 2, 0])
+    bds = poses_arr[:, -2:].transpose([1, 0])
+
+    #hard-coded for room llff for now
+    sh = np.array([378,504,3])
+    poses[:2, 4, :] = np.array(sh[:2]).reshape([2, 1])
+    poses[2, 4, :] = poses[2, 4, :] * 1.0 / factor
+    print('POSES SHAPE: \n', poses.shape)
+
+    # Correct rotation matrix ordering and move variable dim to axis 0
+    poses = np.concatenate([poses[:, 1:2, :], -poses[:, 0:1, :], poses[:, 2:, :]], 1)
+    poses = np.moveaxis(poses, -1, 0).astype(np.float32)
+    bds = np.moveaxis(bds, -1, 0).astype(np.float32)
+
+    # Rescale if bd_factor is provided
+    sc = 1.0 if bd_factor is None else 1.0 / (bds.min() * bd_factor)
+    poses[:, :3, 3] *= sc
+    bds *= sc
+
+    if recenter:
+        poses = recenter_poses(poses)
+        
+    # rendering poses around a sphere for eval
+    c2w = poses_avg(poses)
+    print("recentered", c2w.shape)
+    print(c2w[:3, :4])
+
+    # Get spiral
+    # Get average pose
+    up = normalize(poses[:, :3, 1].sum(0))
+
+    # Find a reasonable "focus depth" for this dataset
+    close_depth, inf_depth = bds.min() * 0.9, bds.max() * 5.0
+    dt = 0.75
+    mean_dz = 1.0 / (((1.0 - dt) / close_depth + dt / inf_depth))
+    focal = mean_dz
+
+    # Get radii for spiral path
+    shrink_factor = 0.8
+    zdelta = close_depth * 0.2
+    tt = poses[:, :3, 3]  # ptstocam(poses[:3,3,:].T, c2w).T
+    rads = np.percentile(np.abs(tt), 90, 0)
+    c2w_path = c2w
+    N_views = 120
+    N_rots = 2
+    if path_zflat:
+        #             zloc = np.percentile(tt, 10, 0)[2]
+        zloc = -close_depth * 0.1
+        c2w_path[:3, 3] = c2w_path[:3, 3] + zloc * c2w_path[:3, 2]
+        rads[2] = 0.0
+        N_rots = 1
+        N_views /= 2
+
+    # Generate poses for spiral path
+    render_poses = render_path_spiral(
+        c2w_path, up, rads, focal, zdelta, zrate=0.5, rots=N_rots, N=N_views
+    )
+    print("spiral path rendered poses")
+
+    render_poses = np.array(render_poses).astype(np.float32)
+    print(render_poses.shape)
+
+    hwf = poses[0, :3, -1]
+    print("hwf values:",hwf)
+    return render_poses,hwf,poses
+
