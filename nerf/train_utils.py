@@ -35,6 +35,7 @@ def predict_and_render_radiance(
     encode_direction_fn=None,
 ):
     # TESTED
+    # structure of ray has origin(num_rays,3), direction(num_rays,3), near(num_rays,1) and far bound(num_rays,1)
     num_rays = ray_batch.shape[0]
     ro, rd = ray_batch[..., :3], ray_batch[..., 3:6]
     bounds = ray_batch[..., 6:8].view((-1, 1, 2))
