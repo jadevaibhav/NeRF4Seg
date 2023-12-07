@@ -27,11 +27,11 @@ Generate and store the segmentation mask for all train images in single .npy fil
 
 ### Run training!
 
-Once everything is setup, to run experiments, first edit `config/room_tiny.yml` to specify your own parameters.
+Once everything is setup, to run experiments, first edit `config/room.yml` to specify your own parameters.
 
 The training script can be invoked by running
 ```bash
-python train_nerf.py --config config/room_tiny.yml
+python train_nerf.py --config config/room.yml
 ```
 
 ### Optional: Resume training from a checkpoint
