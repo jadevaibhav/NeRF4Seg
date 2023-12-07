@@ -21,7 +21,7 @@ conda env create
 conda activate nerf
 ```
 
-### adding segmentation masks for training
+### Adding segmentation masks for training
 
 Generate and store the segmentation mask for all train images in single .npy file(as one-hot encoding) in root folder. We have provided our segmentation mask 8x downscaled resolution of room images for reproducibility.
 
