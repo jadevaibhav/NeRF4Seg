@@ -36,7 +36,7 @@ dataset:
   # TODO: Add description
   llffhold: 8
   # send segmentation masks
-  is_seg: False
+  is_seg: True
   # Using color rendering for segmentation
   is_color: True
 # Model parameters.
