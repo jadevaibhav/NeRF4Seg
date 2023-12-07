@@ -1,4 +1,4 @@
-We propose a novel method of using NeRF models to generalize segmentation masks learned on the data used to train the NeRF model onto a scene. Our approach falls under the paradigm of parallelly learning a class label for each pixel value when the model learns a 3D reconstruction from multiview RGB images. Please refer to [the report](../blob/main/NeRFing the boundaries.pdf) for more details of our methodology.
+We propose a novel method of using NeRF models to generalize segmentation masks learned on the data used to train the NeRF model onto a scene. Our approach falls under the paradigm of parallelly learning a class label for each pixel value when the model learns a 3D reconstruction from multiview RGB images. Please refer to [the report](/blob/main/blob/main/NeRFing%20the%20boundaries.pdf) for more details of our methodology.
 
 ## How to train your NeRF super-quickly!
 
