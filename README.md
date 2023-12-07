@@ -1,4 +1,4 @@
-We propose a novel method of using NeRF models to generalize segmentation masks learned on the data used to train the NeRF model onto a scene. Our approach falls under the paradigm of parallelly learning a class label for each pixel value when the model learns a 3D reconstruction from multiview RGB images. Please refer to [the report](../blob/main/NeRFing the boundaries.pdf) for more details of our methodology.
+We propose a novel method of using NeRF models to generalize segmentation masks learned on the data used to train the NeRF model onto a scene. Our approach falls under the paradigm of parallelly learning a class label for each pixel value when the model learns a 3D reconstruction from multiview RGB images. Please refer to [the report](/blob/main/blob/main/NeRFing%20the%20boundaries.pdf) for more details of our methodology.
 
 ## How to train your NeRF super-quickly!
 
@@ -21,17 +21,17 @@ conda env create
 conda activate nerf
 ```
 
-### adding segmentation masks for training
+### Adding segmentation masks for training
 
 Generate and store the segmentation mask for all train images in single .npy file(as one-hot encoding) in root folder. We have provided our segmentation mask 8x downscaled resolution of room images for reproducibility.
 
 ### Run training!
 
-Once everything is setup, to run experiments, first edit `config/room_tiny.yml` to specify your own parameters.
+Once everything is setup, to run experiments, first edit `config/room.yml` to specify your own parameters.
 
 The training script can be invoked by running
 ```bash
-python train_nerf.py --config config/room_tiny.yml
+python train_nerf.py --config config/room.yml
 ```
 
 ### Optional: Resume training from a checkpoint
